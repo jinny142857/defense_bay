@@ -1,0 +1,35 @@
+:root {
+  --bg-deep: #0e1316;
+  --panel: rgba(18, 26, 31, 0.85);
+  --panel-line: #3a4650;
+  --accent-orange-1: #f0782a;
+  --accent-orange-2: #c9481a;
+  --glow-amber: #ffb067;
+  --hazard-yellow: #f2b22e;
+  --ok-green: #4fd1a1;
+  --info-blue: #4aa8e8;
+  --danger-red: #e5484d;
+  --text-cream: #f3e9d2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-cream);
+  font-family: 'Pretendard', system-ui, 'Malgun Gothic', sans-serif;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
