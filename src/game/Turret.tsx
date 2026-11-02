@@ -1,36 +1,64 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import type { Group } from 'three'
+import { useGLTF } from '@react-three/drei'
+import type { Group, Mesh } from 'three'
+import type { GLTF } from 'three-stdlib'
+import { fireSignal } from './fireSignal'
 
-// M1 임시 도형: 실제 탱크 포탑 모델(PRD 7.4)은 이후 마일스톤에서 GLB로 교체한다.
+const MODEL_URL = '/assets/tank.glb'
+const MODEL_SCALE = 0.32
+const RECOIL_DISTANCE = 0.35
+const RECOIL_DECAY = 0.82
+
+type TankGLTF = GLTF & {
+  nodes: {
+    Turret_Pivot: Group
+    Gun_Pivot: Group
+    Barrel_Recoil: Group
+  }
+}
+
+// BlueTank 에셋(사용자 제작, public/assets/tank.glb). Turret_Pivot(요)>Gun_Pivot(고저각)>Barrel_Recoil(발사 반동).
+// 모델의 전방은 로컬 +X라서 래퍼를 +90도 돌려 게임 전방(-Z)에 맞춘다.
 export function Turret() {
-  const pivot = useRef<Group>(null)
+  const { scene, nodes } = useGLTF(MODEL_URL) as unknown as TankGLTF
   const { pointer } = useThree()
+  const recoilRef = useRef(0)
+  const lastFireSeqRef = useRef(fireSignal.seq)
+
+  useEffect(() => {
+    scene.traverse((obj) => {
+      if ((obj as Mesh).isMesh) {
+        obj.castShadow = true
+        obj.receiveShadow = true
+      }
+    })
+  }, [scene])
 
   useFrame(() => {
-    if (!pivot.current) return
+    const turretPivot = nodes.Turret_Pivot
+    const gunPivot = nodes.Gun_Pivot
+    const recoil = nodes.Barrel_Recoil
+    if (!turretPivot || !gunPivot || !recoil) return
+
+    if (fireSignal.seq !== lastFireSeqRef.current) {
+      lastFireSeqRef.current = fireSignal.seq
+      recoilRef.current = 1
+    }
+    recoilRef.current *= RECOIL_DECAY
+
     const targetYaw = pointer.x * 0.6
-    const targetPitch = pointer.y * 0.3
-    pivot.current.rotation.y += (targetYaw - pivot.current.rotation.y) * 0.15
-    pivot.current.rotation.x += (targetPitch - pivot.current.rotation.x) * 0.15
+    const targetPitch = -pointer.y * 0.3
+    turretPivot.rotation.y += (targetYaw - turretPivot.rotation.y) * 0.15
+    gunPivot.rotation.z += (targetPitch - gunPivot.rotation.z) * 0.15
+    recoil.position.x = -recoilRef.current * RECOIL_DISTANCE
   })
 
   return (
-    <group position={[0, 0.2, -4]}>
-      <mesh position={[0, -0.3, 0]} castShadow>
-        <boxGeometry args={[1.6, 0.6, 1.6]} />
-        <meshStandardMaterial color="#8a3a1a" />
-      </mesh>
-      <group ref={pivot} position={[0, 0.1, 0]}>
-        <mesh castShadow>
-          <capsuleGeometry args={[0.35, 0.5, 4, 8]} />
-          <meshStandardMaterial color="#c9481a" />
-        </mesh>
-        <mesh position={[0, 0, -1.1]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.1, 0.1, 1.8, 8]} />
-          <meshStandardMaterial color="#2a2a28" />
-        </mesh>
-      </group>
+    <group position={[0, 0.2, -4]} rotation={[0, Math.PI / 2, 0]} scale={MODEL_SCALE}>
+      <primitive object={scene} />
     </group>
   )
 }
+
+useGLTF.preload(MODEL_URL)
