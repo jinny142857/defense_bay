@@ -9,7 +9,7 @@ import { Breakwater } from './Breakwater'
 import { Turret } from './Turret'
 import { Mob } from './Mob'
 import { SupplyBox } from './SupplyBox'
-import { Boss } from './Boss'
+import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
 import { Projectile } from './Projectile'
 import { MuzzleFlash } from './MuzzleFlash'
 import { triggerFireSignal } from './fireSignal'
@@ -28,7 +28,10 @@ const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
 const CAMERA_HOME = new Vector3(0, 2.6, -3.3)
 const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
-const CAMERA_BOSS = new Vector3(0, 2.8, -8)
+// 보스 등장 연출: 바다 한가운데 고정된 거신 둘레를 카메라가 한 바퀴 돈다.
+const BOSS_ORBIT_RADIUS = 18
+const BOSS_ORBIT_HEIGHT = 5
+const BOSS_LOOK_HEIGHT = 3
 const SUN_POSITION = SUN_DIRECTION.clone().multiplyScalar(500)
 
 interface MobEntity {
@@ -92,21 +95,35 @@ function SupplyBoxSpawner({ onSpawn }: { onSpawn: (type: SupplyBoxType) => void 
   return null
 }
 
+const orbitTarget = new Vector3()
+
 function CameraRig() {
   const { camera } = useThree()
   const phase = useGameStore((s) => s.phase)
+  const introStartRef = useRef<number | null>(null)
 
   useEffect(() => {
     camera.position.copy(CAMERA_HOME)
     camera.lookAt(...CAMERA_HOME_LOOK)
   }, [camera])
 
+  useEffect(() => {
+    if (phase === 'BOSS_INTRO') introStartRef.current = performance.now()
+  }, [phase])
+
   useFrame(() => {
-    const target = phase === 'BOSS_INTRO' ? CAMERA_BOSS : CAMERA_HOME
-    camera.position.lerp(target, phase === 'BOSS_INTRO' ? 0.03 : 0.05)
     if (phase === 'BOSS_INTRO') {
-      camera.lookAt(0, 1.5, -22)
+      const elapsed = introStartRef.current != null ? (performance.now() - introStartRef.current) / 1000 : 0
+      const angle = (elapsed / balance.boss.introDurationSec) * Math.PI * 2
+      orbitTarget.set(
+        Math.sin(angle) * BOSS_ORBIT_RADIUS,
+        BOSS_ORBIT_HEIGHT,
+        BOSS_COMBAT_Z + Math.cos(angle) * BOSS_ORBIT_RADIUS,
+      )
+      camera.position.lerp(orbitTarget, 0.08)
+      camera.lookAt(0, BOSS_LOOK_HEIGHT, BOSS_COMBAT_Z)
     } else {
+      camera.position.lerp(CAMERA_HOME, 0.05)
       camera.lookAt(...CAMERA_HOME_LOOK)
     }
   })

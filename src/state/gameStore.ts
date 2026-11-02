@@ -88,6 +88,7 @@ interface GameState {
   // --- actions ---
   goToLobby: () => void
   startStage: () => void
+  retryWave: () => void
   beginPreCheck: () => void
   answerPreCheck: (slotKey: PreCheckSlot['key'], choice: number, responseMs: number) => void
 
@@ -147,6 +148,15 @@ function tryEnterDebrief(set: SetFn, get: GetFn) {
   const picked = pickQuestions(balance.debrief.questionCount, used)
   picked.forEach((q) => used.add(q.id))
   set({ phase: 'DEBRIEF', debriefQuestions: picked, debriefAttempts: [], usedQuestionIds: used })
+}
+
+// PRD 4.5 패배 조건: 방파제 내구도 0. 전투 중일 때만 발동시켜 이미 패배/다른 화면으로
+// 넘어간 뒤 중복 발동되지 않게 한다.
+function checkDefeat(set: SetFn, get: GetFn): boolean {
+  const s = get()
+  if (s.durability > 0 || s.phase !== 'COMBAT') return false
+  set({ phase: 'DEFEAT' })
+  return true
 }
 
 function resolveCrab(set: SetFn, get: GetFn) {
@@ -260,7 +270,37 @@ export const useGameStore = create<GameState>()(
         })
         get().beginPreCheck()
       },
-    
+
+      // PRD 4.5: 패배 시 해당 웨이브부터 재시작(출격 점검 다시 수행).
+      // waveNumber/score/usedQuestionIds는 유지하고, 이번 스테이지에서 번 부품의 절반만 남긴다.
+      retryWave: () => {
+        const s = get()
+        const lostParts = Math.floor(s.stagePartsEarned / 2)
+        set({
+          durability: balance.combat.breakwaterMaxDurability,
+          attackBuffPct: 0,
+          fireRateBuffPct: 0,
+          parts: Math.max(0, s.parts - lostParts),
+          stagePartsEarned: Math.max(0, s.stagePartsEarned - lostParts),
+          crabsTotal: 0,
+          crabsRemaining: 0,
+          crabsDefeated: 0,
+          debriefAttempts: [],
+          activeSupplyQuestion: null,
+          supplyBombardPulse: 0,
+          infiniteReloadUntil: 0,
+          bossActive: false,
+          bossTriggered: false,
+          bossDefeated: false,
+          bossHp: balance.boss.maxHp,
+          bossWeakPointIndex: 0,
+          bossExposed: true,
+          bossAttackTelegraphed: false,
+          bossExposureBonusSec: 0,
+        })
+        get().beginPreCheck()
+      },
+
       beginPreCheck: () => {
         const used = get().usedQuestionIds
         const picked = pickQuestions(balance.preCheckQuestionCount, used)
@@ -349,6 +389,7 @@ export const useGameStore = create<GameState>()(
       crabReachedBreakwater: () => {
         const next = Math.max(0, get().durability - balance.combat.crabDamageOnHit)
         set({ durability: next })
+        if (checkDefeat(set, get)) return
         resolveCrab(set, get)
       },
     
@@ -405,6 +446,7 @@ export const useGameStore = create<GameState>()(
           bossAttackTelegraphed: false,
           durability: Math.max(0, s.durability - balance.boss.attackDamage),
         })
+        checkDefeat(set, get)
       },
     
       openSupplyBox: (boxType) => {

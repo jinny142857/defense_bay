@@ -6,6 +6,7 @@ import { LobbyScreen } from './ui/LobbyScreen'
 import { PreCheckScreen } from './ui/PreCheckScreen'
 import { CombatHUD } from './ui/CombatHUD'
 import { BossIntroOverlay } from './ui/BossIntroOverlay'
+import { DefeatScreen } from './ui/DefeatScreen'
 import { DebriefScreen } from './ui/DebriefScreen'
 import { MaintenanceScreen } from './ui/MaintenanceScreen'
 import { StageResultScreen } from './ui/StageResultScreen'
@@ -77,6 +78,7 @@ export default function App() {
             {phase === 'BOSS_INTRO' && <BossIntroOverlay />}
           </>
         )}
+        {phase === 'DEFEAT' && <DefeatScreen />}
         {phase === 'DEBRIEF' && <DebriefScreen />}
         {phase === 'MAINTENANCE' && <MaintenanceScreen />}
         {phase === 'STAGE_RESULT' && <StageResultScreen />}

@@ -533,10 +533,44 @@
   font-size: 1.1rem;
 }
 
-.boss-intro__skip {
-  pointer-events: auto;
+.boss-intro__hint {
   margin-top: 16px;
   padding: 8px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  color: var(--text-cream);
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* --- 패배 --- */
+.screen--defeat h1 {
+  font-size: 2.2rem;
+  color: var(--danger-red);
+  text-shadow: 0 0 16px var(--danger-red);
+}
+
+.defeat__note {
+  color: var(--glow-amber);
+}
+
+.defeat__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.defeat__retry {
+  padding: 12px 28px;
+  background: linear-gradient(90deg, var(--accent-orange-1), var(--accent-orange-2));
+  border: none;
+  color: var(--text-cream);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.defeat__lobby {
+  padding: 12px 20px;
   background: var(--panel);
   border: 1px solid var(--panel-line);
   color: var(--text-cream);

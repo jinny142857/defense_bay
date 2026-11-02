@@ -120,6 +120,45 @@ describe('보스 약점 데미지 배율', () => {
   })
 })
 
+describe('패배 (방파제 내구도 0)', () => {
+  beforeEach(() => {
+    resetToCombat(2, 999)
+    useGameStore.setState({ parts: 100, stagePartsEarned: 40 })
+  })
+
+  it('내구도가 0이 되면 DEFEAT로 전환되고, 그 전까지는 COMBAT을 유지한다', () => {
+    const hitsToZero = balance.combat.breakwaterMaxDurability / balance.combat.crabDamageOnHit
+    for (let i = 0; i < hitsToZero - 1; i++) {
+      useGameStore.getState().crabReachedBreakwater()
+    }
+    expect(useGameStore.getState().phase).toBe('COMBAT')
+    expect(useGameStore.getState().durability).toBeGreaterThan(0)
+
+    useGameStore.getState().crabReachedBreakwater()
+    expect(useGameStore.getState().durability).toBe(0)
+    expect(useGameStore.getState().phase).toBe('DEFEAT')
+  })
+
+  it('보스 공격으로 내구도가 0이 돼도 DEFEAT로 전환된다', () => {
+    useGameStore.setState({ waveNumber: 3, durability: balance.boss.attackDamage, bossAttackTelegraphed: true })
+    useGameStore.getState().resolveBossAttack()
+    expect(useGameStore.getState().durability).toBe(0)
+    expect(useGameStore.getState().phase).toBe('DEFEAT')
+  })
+
+  it('다시 도전하면 같은 웨이브의 출격 점검으로 돌아가고, 번 부품의 절반만 남는다', () => {
+    useGameStore.setState({ phase: 'DEFEAT', durability: 0, waveNumber: 2 })
+    useGameStore.getState().retryWave()
+
+    const s = useGameStore.getState()
+    expect(s.phase).toBe('PRE_CHECK')
+    expect(s.waveNumber).toBe(2)
+    expect(s.durability).toBe(balance.combat.breakwaterMaxDurability)
+    expect(s.parts).toBe(80) // 100 - floor(40/2)
+    expect(s.stagePartsEarned).toBe(20)
+  })
+})
+
 describe('격납고 강화 게이트 (Lv5 이상은 문제 통과 필요)', () => {
   beforeEach(() => {
     useGameStore.setState({

@@ -11,8 +11,7 @@ import { getWaveHeight } from './SeaWater.js'
 const MODEL_URL = '/assets/boss-volcano-titan.glb'
 const MODEL_SCALE = 0.5
 const SINK = 0.15 // 거신은 레퍼런스대로 거의 잠기지 않고 물 위로 크게 선다
-const COMBAT_Z = -22
-const INTRO_START_Z = -700
+export const COMBAT_Z = -22
 
 // Boss_VolcanoTitan.glb(SeaMobs_GameAssets) 오브젝트 이름 기준 PRD 5.4 약점 진행(머리→가슴→등)에
 // 대응하는 메시를 지정한다. 페이즈마다 이 중 하나만 "열려" 있다 — 나머지 둘은 닫힌 상태로
@@ -85,13 +84,6 @@ export function Boss({ onHit }: { onHit: (targetWeak: boolean) => void }) {
 
   useBossCombatTimers()
 
-  // PRD 5.1 전조~타이틀 구간: 수평선 너머에서 전투 거리까지 실제로 다가오며
-  // 점점 크게 보이도록 해 위압감을 준다 (카메라 줌과 함께 동기화).
-  const introStartRef = useRef<number | null>(null)
-  useEffect(() => {
-    if (phase === 'BOSS_INTRO') introStartRef.current = performance.now()
-  }, [phase])
-
   useEffect(() => {
     weakMeshes.current = {}
     // 내보낸 GLB에 딸려온 Camera/Light는 씬 조명에 영향을 주므로 순회 후 따로 제거한다
@@ -136,12 +128,9 @@ export function Boss({ onHit }: { onHit: (targetWeak: boolean) => void }) {
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return
 
-    if (phase === 'BOSS_INTRO' && introStartRef.current != null) {
-      const t = Math.min(1, (performance.now() - introStartRef.current) / 1000 / balance.boss.introDurationSec)
-      const eased = 1 - (1 - t) * (1 - t)
-      groupRef.current.position.z = INTRO_START_Z + (COMBAT_Z - INTRO_START_Z) * eased
-    } else {
-      groupRef.current.position.z = COMBAT_Z
+    // 바다 한가운데 고정된 자리에 서 있는다 — 등장 연출에서는 카메라가 주위를 돈다(CameraRig).
+    groupRef.current.position.z = COMBAT_Z
+    if (phase === 'COMBAT') {
       groupRef.current.rotation.y += delta * 0.05
     }
 
@@ -159,7 +148,7 @@ export function Boss({ onHit }: { onHit: (targetWeak: boolean) => void }) {
   }
 
   return (
-    <group ref={groupRef} position={[0, 0, INTRO_START_Z]} scale={MODEL_SCALE}>
+    <group ref={groupRef} position={[0, 0, COMBAT_Z]} scale={MODEL_SCALE}>
       <primitive object={model} onClick={handleClick} />
     </group>
   )

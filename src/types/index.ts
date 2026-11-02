@@ -38,6 +38,7 @@ export type GamePhase =
   | 'WAVE_INTRO'
   | 'BOSS_INTRO'
   | 'COMBAT'
+  | 'DEFEAT'
   | 'DEBRIEF'
   | 'MAINTENANCE'
   | 'STAGE_RESULT'
