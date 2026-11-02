@@ -16,7 +16,7 @@ import type {
   QuestionContext,
   SupplyBoxType,
 } from '../types'
-import questionsData from '../data/questions/math-g3-s1-sample.json'
+import questionsData from '../data/questions/math-g3-2-fraction.json'
 
 const questions = questionsData as Question[]
 type WeakIndex = 0 | 1 | 2
