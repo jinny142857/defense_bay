@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore } from './state/gameStore'
+import { hadSavedState } from './state/idbStorage'
 import { Scene } from './game/Scene'
 import { PreCheckScreen } from './ui/PreCheckScreen'
 import { CombatHUD } from './ui/CombatHUD'
@@ -30,11 +31,30 @@ function WaveIntroScreen() {
 export default function App() {
   const phase = useGameStore((s) => s.phase)
   const startStage = useGameStore((s) => s.startStage)
+  // PRD 9.3/9.5: IndexedDB에서 이전 진행 상황을 다 불러올 때까지 기다렸다가,
+  // 저장된 게 없는 완전히 새 세션일 때만 1웨이브부터 시작한다. 저장된 게 있으면
+  // 끝났던 지점(열려 있던 문제 포함)을 그대로 이어간다.
+  const [hydrated, setHydrated] = useState(() => useGameStore.persist.hasHydrated())
 
   useEffect(() => {
+    if (hydrated) return
+    return useGameStore.persist.onFinishHydration(() => setHydrated(true))
+  }, [hydrated])
+
+  useEffect(() => {
+    if (!hydrated || hadSavedState) return
     startStage()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [hydrated, startStage])
+
+  if (!hydrated) {
+    return (
+      <div className="app">
+        <div className="screen screen--loading">
+          <p>불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
 
   const showScene = phase === 'COMBAT' || phase === 'BOSS_INTRO'
 

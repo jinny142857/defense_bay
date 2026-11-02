@@ -1,3 +1,35 @@
+@font-face {
+  font-family: 'ChaiHwaljjak';
+  src: url('https://cdn.jsdelivr.net/gh/yellopencil/yellopencil-webfonts@v1.48.0/fonts/chai-hwaljjak/ChaiHwaljjak-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ChaiHwaljjak';
+  src: url('https://cdn.jsdelivr.net/gh/yellopencil/yellopencil-webfonts@v1.48.0/fonts/chai-hwaljjak/ChaiHwaljjak-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ChaiHwaljjak';
+  src: url('https://cdn.jsdelivr.net/gh/yellopencil/yellopencil-webfonts@v1.48.0/fonts/chai-hwaljjak/ChaiHwaljjak-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ChaiHwaljjak';
+  src: url('https://cdn.jsdelivr.net/gh/yellopencil/yellopencil-webfonts@v1.48.0/fonts/chai-hwaljjak/ChaiHwaljjak-Heavy.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg-deep: #0e1316;
   --panel: rgba(18, 26, 31, 0.85);
@@ -26,7 +58,7 @@ body,
 body {
   background: var(--bg-deep);
   color: var(--text-cream);
-  font-family: 'Pretendard', system-ui, 'Malgun Gothic', sans-serif;
+  font-family: 'ChaiHwaljjak', 'Pretendard', system-ui, 'Malgun Gothic', sans-serif;
 }
 
 button {
