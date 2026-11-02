@@ -55,7 +55,7 @@ export function Turret() {
   })
 
   return (
-    <group position={[0, 0.2, -4]} rotation={[0, Math.PI / 2, 0]} scale={MODEL_SCALE}>
+    <group position={[0, 1.0, -6]} rotation={[0, Math.PI / 2, 0]} scale={MODEL_SCALE}>
       <primitive object={scene} />
     </group>
   )

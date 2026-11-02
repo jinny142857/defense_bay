@@ -22,9 +22,16 @@ export const balance = {
   // PRD 4 전투
   combat: {
     breakwaterMaxDurability: 100,
-    crabDamageOnHit: 10, // 꼬마 게가 방파제에 닿았을 때 피해
-    crabSpeed: 6, // m/s, 수평선 -> 방파제
+    crabDamageOnHit: 10, // 몹이 방파제에 닿았을 때 피해
     crabSpawnIntervalSec: 1.2,
+  },
+
+  // 몹 모델(SeaMobs_GameAssets, README_for_ClaudeCode.md 가이드)별 이동/잠김 수치.
+  // speed: m/s, sink: 파도 높이 대비 잠기는 깊이(m). 게는 얕게, 거북두꺼비는 배까지 잠기도록 기본값을 둠.
+  // 플레이 테스트하면서 숫자만 조절하면 됨.
+  mobs: {
+    crab: { speed: 9, sink: 0.35, scale: 1 },
+    frogTurtle: { speed: 6, sink: 0.9, scale: 1 },
   },
 
   // PRD 4.3 스테이지 1, 웨이브별 일반 몹 수 (3웨이브는 보스 포함)

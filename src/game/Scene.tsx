@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
 import { Vector3 } from 'three'
-import { Sky } from '@react-three/drei'
-import { Ocean } from './Ocean'
+import { Sea } from './Sea'
+import { Mountains } from './Mountains'
+import { SEA_FOG, SUN_DIRECTION } from './SeaWater.js'
 import { Breakwater } from './Breakwater'
 import { Turret } from './Turret'
-import { Crab } from './Crab'
+import { Mob } from './Mob'
 import { SupplyBox } from './SupplyBox'
 import { Boss } from './Boss'
 import { Projectile } from './Projectile'
@@ -15,20 +16,26 @@ import { triggerFireSignal } from './fireSignal'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
 import { useGameStore } from '../state/gameStore'
-import type { SupplyBoxType } from '../types'
+import type { MobKind, SupplyBoxType } from '../types'
 
-const WALL_Z = -6
-const SPAWN_Z = -55
+// SeaEnvironment_GameAssets 가이드 좌표계: 원점 = 방파제/플레이어, 바다 쪽 = -Z, 1 unit = 1m
+const MOB_SPAWN_X_SPREAD = 300
+const MOB_SPAWN_Z_MIN = 600
+const MOB_SPAWN_Z_MAX = 800
 const BOX_Z = -16
 const BOX_GROUND_Y = -0.5
-const MUZZLE: [number, number, number] = [0, 0.83, -6.3]
-const CAMERA_HOME = new Vector3(0, 2.6, 0.8)
-const CAMERA_HOME_LOOK: [number, number, number] = [0, -1.2, -16]
-const CAMERA_BOSS = new Vector3(0, 2, -8)
+const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
+// 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
+const CAMERA_HOME = new Vector3(0, 2.6, -3.3)
+const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
+const CAMERA_BOSS = new Vector3(0, 2.8, -8)
+const SUN_POSITION = SUN_DIRECTION.clone().multiplyScalar(500)
 
-interface CrabEntity {
+interface MobEntity {
   id: string
+  kind: MobKind
   startX: number
+  startZ: number
 }
 
 interface BoxEntity {
@@ -108,7 +115,7 @@ function CameraRig() {
 }
 
 function SceneContents() {
-  const [crabs, setCrabs] = useState<CrabEntity[]>([])
+  const [mobs, setMobs] = useState<MobEntity[]>([])
   const [boxes, setBoxes] = useState<BoxEntity[]>([])
   const [tracers, setTracers] = useState<Tracer[]>([])
   const [flashes, setFlashes] = useState<{ id: string }[]>([])
@@ -117,7 +124,7 @@ function SceneContents() {
   const openSupplyBox = useGameStore((s) => s.openSupplyBox)
   const damageBoss = useGameStore((s) => s.damageBoss)
   const waveNumber = useGameStore((s) => s.waveNumber)
-  const bossActive = useGameStore((s) => s.bossActive)
+  const bossTriggered = useGameStore((s) => s.bossTriggered)
   const bombardPulse = useGameStore((s) => s.supplyBombardPulse)
   const fireRateBuffPct = useGameStore((s) => s.fireRateBuffPct)
   const equippedWeaponId = useGameStore((s) => s.equippedWeaponId)
@@ -127,9 +134,9 @@ function SceneContents() {
 
   useEffect(() => {
     if (bombardPulse === 0) return
-    const count = crabs.length
+    const count = mobs.length
     if (count === 0) return
-    setCrabs([])
+    setMobs([])
     for (let i = 0; i < count; i++) defeatCrab()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bombardPulse])
@@ -148,10 +155,12 @@ function SceneContents() {
     return true
   }
 
-  const spawnCrab = () => {
-    const id = `crab-${nextId.current++}`
-    const startX = (Math.random() - 0.5) * 10
-    setCrabs((list) => [...list, { id, startX }])
+  const spawnMob = () => {
+    const id = `mob-${nextId.current++}`
+    const startX = (Math.random() - 0.5) * MOB_SPAWN_X_SPREAD
+    const startZ = -(MOB_SPAWN_Z_MIN + Math.random() * (MOB_SPAWN_Z_MAX - MOB_SPAWN_Z_MIN))
+    const kind: MobKind = Math.random() < 0.5 ? 'crab' : 'frogTurtle'
+    setMobs((list) => [...list, { id, kind, startX, startZ }])
   }
 
   const spawnBox = (boxType: SupplyBoxType) => {
@@ -176,16 +185,16 @@ function SceneContents() {
   return (
     <>
       <CameraRig />
-      <Sky inclination={0.49} azimuth={0.22} turbidity={6} rayleigh={1.2} mieCoefficient={0.01} mieDirectionalG={0.85} />
-      <fog attach="fog" args={['#0c2638', 30, 130]} />
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
-      <Spawner onSpawn={spawnCrab} />
+      <fog attach="fog" args={[SEA_FOG.color, SEA_FOG.near, SEA_FOG.far]} />
+      <hemisphereLight args={[0xbac4c8, 0x1f3a40, 1.2]} />
+      <directionalLight position={SUN_POSITION} intensity={1.6} color={0xffe2c0} castShadow />
+      <Spawner onSpawn={spawnMob} />
       <SupplyBoxSpawner onSpawn={spawnBox} />
-      <Ocean onPointerDown={handleMiss} />
+      <Sea onPointerDown={handleMiss} />
+      <Mountains />
       <Breakwater />
       <Turret />
-      {waveNumber === 3 && bossActive && (
+      {waveNumber === 3 && bossTriggered && (
         <Boss
           onHit={(targetWeak) => {
             if (!tryFire()) return
@@ -193,21 +202,21 @@ function SceneContents() {
           }}
         />
       )}
-      {crabs.map((c) => (
-        <Crab
-          key={c.id}
-          startX={c.startX}
-          startZ={SPAWN_Z}
-          wallZ={WALL_Z}
+      {mobs.map((m) => (
+        <Mob
+          key={m.id}
+          kind={m.kind}
+          startX={m.startX}
+          startZ={m.startZ}
           onHit={(point) => {
             if (!tryFire()) return false
             addTracer(point)
-            setCrabs((list) => list.filter((x) => x.id !== c.id))
+            setMobs((list) => list.filter((x) => x.id !== m.id))
             defeatCrab()
             return true
           }}
           onReachWall={() => {
-            setCrabs((list) => list.filter((x) => x.id !== c.id))
+            setMobs((list) => list.filter((x) => x.id !== m.id))
             crabReachedBreakwater()
           }}
         />
@@ -251,7 +260,7 @@ function SceneContents() {
 
 export function Scene() {
   return (
-    <Canvas camera={{ position: [0, 1.2, 0], fov: 60 }} shadows>
+    <Canvas camera={{ position: [0, 1.2, 0], fov: 60, far: 3000 }} shadows>
       <SceneContents />
     </Canvas>
   )

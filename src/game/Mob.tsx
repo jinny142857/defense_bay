@@ -1,30 +1,37 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
+import { Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { balance } from '../config/balance'
 import { useGameStore } from '../state/gameStore'
+import { getWaveHeight } from './SeaWater.js'
+import type { MobKind } from '../types'
 
-const MODEL_URL = '/assets/crab.glb'
-const MODEL_SCALE = 0.42
-const GROUND_Y = -0.8
+// 두 몹 모델(SeaMobs_GameAssets, README_for_ClaudeCode.md 가이드) 모두 정면이 +Z(플레이어 쪽)를 향한다.
+const MOB_URLS: Record<MobKind, string> = {
+  crab: '/assets/mob-spike-crab.glb',
+  frogTurtle: '/assets/mob-shell-toad.glb',
+}
+const WALL_TRIGGER_Z = -5
+const toTarget = new Vector3()
 
-// 실제 꼬마 게 몬스터 모델(PRD 7.4, Blender MCP로 제작). 집게/눈자루가 +Z(전진 방향)를 향하도록 내보냈다.
-export function Crab({
+export function Mob({
+  kind,
   startX,
   startZ,
-  wallZ,
   onReachWall,
   onHit,
 }: {
+  kind: MobKind
   startX: number
   startZ: number
-  wallZ: number
   onReachWall: () => void
   onHit: (point: [number, number, number]) => boolean
 }) {
-  const { scene } = useGLTF(MODEL_URL)
+  const { speed, sink, scale } = balance.mobs[kind]
+  const { scene } = useGLTF(MOB_URLS[kind])
   const model = useMemo(() => scene.clone(true), [scene])
   const groupRef = useRef<Group>(null)
   const doneRef = useRef(false)
@@ -40,12 +47,28 @@ export function Crab({
     })
   }, [model])
 
-  useFrame((_, delta) => {
-    if (doneRef.current || !groupRef.current) return
+  useFrame(({ clock }, delta) => {
+    const group = groupRef.current
+    if (doneRef.current || !group) return
     if (phase === 'BOSS_INTRO') return
     const speedMul = slow ? 0.15 : 1
-    groupRef.current.position.z += balance.combat.crabSpeed * speedMul * delta
-    if (groupRef.current.position.z >= wallZ) {
+
+    // 방파제(원점) 쪽으로 이동, 모델 정면(+Z)이 이동 방향을 보도록 회전
+    toTarget.set(-group.position.x, 0, -group.position.z).normalize()
+    group.position.addScaledVector(toTarget, speed * speedMul * delta)
+    group.rotation.y = Math.atan2(toTarget.x, toTarget.z)
+
+    // 파도 위에 떠서 일부 잠김 + 경사에 따라 살짝 기울기
+    const t = clock.getElapsedTime()
+    const { x, z } = group.position
+    group.position.y = getWaveHeight(x, z, t) - sink
+    const e = 1.5
+    const dx = getWaveHeight(x + e, z, t) - getWaveHeight(x - e, z, t)
+    const dz = getWaveHeight(x, z + e, t) - getWaveHeight(x, z - e, t)
+    group.rotation.z = -dx * 0.25
+    group.rotation.x = dz * 0.25
+
+    if (z > WALL_TRIGGER_Z) {
       doneRef.current = true
       onReachWall()
     }
@@ -61,10 +84,11 @@ export function Crab({
   }
 
   return (
-    <group ref={groupRef} position={[startX, GROUND_Y, startZ]} scale={MODEL_SCALE} onClick={handleClick}>
+    <group ref={groupRef} position={[startX, 0, startZ]} scale={scale} onClick={handleClick}>
       <primitive object={model} />
     </group>
   )
 }
 
-useGLTF.preload(MODEL_URL)
+useGLTF.preload(MOB_URLS.crab)
+useGLTF.preload(MOB_URLS.frogTurtle)

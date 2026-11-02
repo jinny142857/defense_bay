@@ -49,6 +49,9 @@ export interface PreCheckSlot {
   correct: boolean | null
 }
 
+// PRD 4.4 몹 종류 (M2에서는 꼬마 게 / 개구리-거북이형 몬스터 2종)
+export type MobKind = 'crab' | 'frogTurtle'
+
 // PRD 3.3 보급상자
 export type SupplyBoxType = 'parts' | 'bombard' | 'repair'
 

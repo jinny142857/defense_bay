@@ -1,20 +1,25 @@
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import type { Mesh } from 'three'
+import { useGLTF } from '@react-three/drei'
+import { Color, MeshStandardMaterial } from 'three'
+import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import type { SupplyBoxType } from '../types'
 
-const COLORS: Record<SupplyBoxType, string> = {
-  parts: '#f2b22e',
-  bombard: '#e5484d',
-  repair: '#4fd1a1',
+const MODEL_URL = '/assets/supply-drop.glb'
+const MODEL_SCALE = 0.22
+
+// SupplyDrop.glb(SeaMobs_GameAssets)의 Beacon_Light로 상자 종류를 색으로 구분한다(PRD 3.3).
+const BEACON_COLORS: Record<SupplyBoxType, Color> = {
+  parts: new Color('#f2b22e'),
+  bombard: new Color('#e5484d'),
+  repair: new Color('#4fd1a1'),
 }
 
 const START_Y = 10
 
-// M1 임시 도형: 실제 낙하산 보급상자 모델(PRD 7.4)은 이후 마일스톤에서 GLB로 교체한다.
 export function SupplyBox({
   boxType,
   startX,
@@ -30,19 +35,37 @@ export function SupplyBox({
   onCatch: () => boolean
   onLost: () => void
 }) {
-  const meshRef = useRef<Mesh>(null)
+  const { scene } = useGLTF(MODEL_URL)
+  const model = useMemo(() => scene.clone(true), [scene])
+  const groupRef = useRef<Group>(null)
   const doneRef = useRef(false)
   const phase = useGameStore((s) => s.phase)
   const slow = useGameStore((s) => s.activeSupplyQuestion !== null)
 
+  useEffect(() => {
+    const beaconColor = BEACON_COLORS[boxType]
+    model.traverse((obj) => {
+      const mesh = obj as Mesh
+      if (!mesh.isMesh) return
+      mesh.castShadow = true
+      if (mesh.name === 'Beacon_Light') {
+        mesh.material = (mesh.material as MeshStandardMaterial).clone()
+        const mat = mesh.material as MeshStandardMaterial
+        mat.color.copy(beaconColor)
+        mat.emissive.copy(beaconColor)
+        mat.emissiveIntensity = 1.5
+      }
+    })
+  }, [model, boxType])
+
   const fallSpeed = (START_Y - groundY) / balance.supplyBox.fallDurationSec
 
   useFrame((_, delta) => {
-    if (doneRef.current || !meshRef.current) return
+    if (doneRef.current || !groupRef.current) return
     if (phase === 'BOSS_INTRO') return
     const speedMul = slow ? 0.15 : 1
-    meshRef.current.position.y -= fallSpeed * speedMul * delta
-    if (meshRef.current.position.y <= groundY) {
+    groupRef.current.position.y -= fallSpeed * speedMul * delta
+    if (groupRef.current.position.y <= groundY) {
       doneRef.current = true
       onLost()
     }
@@ -55,13 +78,10 @@ export function SupplyBox({
   }
 
   return (
-    <mesh ref={meshRef} position={[startX, START_Y, startZ]} onClick={handleClick} castShadow>
-      <boxGeometry args={[0.6, 0.6, 0.6]} />
-      <meshStandardMaterial
-        color={COLORS[boxType]}
-        emissive={COLORS[boxType]}
-        emissiveIntensity={0.3}
-      />
-    </mesh>
+    <group ref={groupRef} position={[startX, START_Y, startZ]} scale={MODEL_SCALE} onClick={handleClick}>
+      <primitive object={model} />
+    </group>
   )
 }
+
+useGLTF.preload(MODEL_URL)
