@@ -569,6 +569,41 @@
 }
 
 /* --- 격납고 --- */
+.hangar__vehicles {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.hangar__vehicle {
+  width: 150px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  color: var(--text-cream);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.hangar__vehicle.is-equipped {
+  border-color: var(--ok-green);
+}
+
+.hangar__vehicle.is-locked {
+  opacity: 0.4;
+}
+
+.hangar__vehicle-name {
+  font-weight: 700;
+}
+
+.hangar__vehicle-hint {
+  font-size: 0.8rem;
+  color: var(--glow-amber);
+}
+
 .hangar__layout {
   display: flex;
   gap: 24px;

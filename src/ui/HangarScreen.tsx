@@ -1,9 +1,11 @@
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
+import { VEHICLE_DEFS } from '../data/vehicles'
 import { QuestionModal } from './QuestionModal'
 
 const ALL_WEAPON_IDS = Object.keys(WEAPON_DEFS)
+const ALL_VEHICLE_IDS = Object.keys(VEHICLE_DEFS)
 
 export function HangarScreen() {
   const parts = useGameStore((s) => s.parts)
@@ -17,6 +19,9 @@ export function HangarScreen() {
   const startStage = useGameStore((s) => s.startStage)
   const goToLobby = useGameStore((s) => s.goToLobby)
   const readLockMultiplier = useGameStore((s) => s.readLockMultiplier)
+  const ownedVehicles = useGameStore((s) => s.ownedVehicles)
+  const equippedVehicleId = useGameStore((s) => s.equippedVehicleId)
+  const equipVehicle = useGameStore((s) => s.equipVehicle)
 
   const equippedDef = WEAPON_DEFS[equippedWeaponId]
   const equippedLevel = weaponLevels[equippedWeaponId] ?? 1
@@ -33,6 +38,30 @@ export function HangarScreen() {
       </button>
       <h1>격납고</h1>
       <p className="screen__subtitle">보유 부품 ⚙ {parts}</p>
+
+      <div className="hangar__vehicles">
+        {ALL_VEHICLE_IDS.map((id) => {
+          const def = VEHICLE_DEFS[id]
+          const owned = ownedVehicles.includes(id)
+          return (
+            <button
+              key={id}
+              className={
+                'hangar__vehicle' +
+                (id === equippedVehicleId ? ' is-equipped' : '') +
+                (!owned ? ' is-locked' : '')
+              }
+              disabled={!owned}
+              onClick={() => equipVehicle(id)}
+            >
+              <span className="hangar__vehicle-name">{owned ? def.name : 'LOCKED'}</span>
+              <span className="hangar__vehicle-hint">
+                {owned ? (id === equippedVehicleId ? '장착 중' : '장착 가능') : def.unlockHint}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
       <div className="hangar__layout">
         <div className="hangar__weapon-list">

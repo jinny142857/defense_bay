@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { idbStorage } from './idbStorage'
 import { balance } from '../config/balance'
 import { STARTING_WEAPON_ID, STAGE1_CLEAR_UNLOCK_WEAPON_ID, WEAPON_DEFS } from '../data/weapons'
+import { STARTING_VEHICLE_ID } from '../data/vehicles'
 import { computeDiligenceGrade, computeStars } from './diligence'
 import type {
   ActiveSupplyQuestion,
@@ -81,6 +82,9 @@ interface GameState {
   weaponLevels: Record<string, number>
   pendingUpgrade: PendingUpgrade | null
 
+  ownedVehicles: string[]
+  equippedVehicleId: string
+
   // --- actions ---
   goToLobby: () => void
   startStage: () => void
@@ -109,6 +113,7 @@ interface GameState {
 
   goToHangar: () => void
   equipWeapon: (weaponId: string) => void
+  equipVehicle: (vehicleId: string) => void
   requestUpgrade: (weaponId: string) => void
   answerUpgrade: (choice: number, responseMs: number) => void
 
@@ -217,6 +222,9 @@ export const useGameStore = create<GameState>()(
       equippedWeaponId: STARTING_WEAPON_ID,
       weaponLevels: { [STARTING_WEAPON_ID]: 1 },
       pendingUpgrade: null,
+
+      ownedVehicles: [STARTING_VEHICLE_ID],
+      equippedVehicleId: STARTING_VEHICLE_ID,
 
       goToLobby: () => set({ phase: 'LOBBY' }),
 
@@ -560,7 +568,13 @@ export const useGameStore = create<GameState>()(
         if (!s.ownedWeapons.includes(weaponId)) return
         set({ equippedWeaponId: weaponId })
       },
-    
+
+      equipVehicle: (vehicleId) => {
+        const s = get()
+        if (!s.ownedVehicles.includes(vehicleId)) return
+        set({ equippedVehicleId: vehicleId })
+      },
+
       requestUpgrade: (weaponId) => {
         const s = get()
         const level = s.weaponLevels[weaponId] ?? 1
