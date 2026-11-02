@@ -82,6 +82,7 @@ interface GameState {
   pendingUpgrade: PendingUpgrade | null
 
   // --- actions ---
+  goToLobby: () => void
   startStage: () => void
   beginPreCheck: () => void
   answerPreCheck: (slotKey: PreCheckSlot['key'], choice: number, responseMs: number) => void
@@ -167,7 +168,7 @@ const PRE_CHECK_SLOTS: { key: PreCheckSlot['key']; label: string }[] = [
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
-      phase: 'PRE_CHECK',
+      phase: 'LOBBY',
       waveNumber: 1,
       durability: balance.combat.breakwaterMaxDurability,
       attackBuffPct: 0,
@@ -216,7 +217,9 @@ export const useGameStore = create<GameState>()(
       equippedWeaponId: STARTING_WEAPON_ID,
       weaponLevels: { [STARTING_WEAPON_ID]: 1 },
       pendingUpgrade: null,
-    
+
+      goToLobby: () => set({ phase: 'LOBBY' }),
+
       startStage: () => {
         set({
           waveNumber: 1,

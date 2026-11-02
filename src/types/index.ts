@@ -33,6 +33,7 @@ export interface Attempt {
 //          -> (다음 웨이브 | STAGE_RESULT) -> HANGAR
 // M1~M2에서는 LOBBY/STAGE_SELECT를 생략하고 스테이지 1(3웨이브)만 다룬다.
 export type GamePhase =
+  | 'LOBBY'
   | 'PRE_CHECK'
   | 'WAVE_INTRO'
   | 'BOSS_INTRO'

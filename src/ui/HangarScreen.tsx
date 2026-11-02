@@ -15,6 +15,7 @@ export function HangarScreen() {
   const requestUpgrade = useGameStore((s) => s.requestUpgrade)
   const answerUpgrade = useGameStore((s) => s.answerUpgrade)
   const startStage = useGameStore((s) => s.startStage)
+  const goToLobby = useGameStore((s) => s.goToLobby)
   const readLockMultiplier = useGameStore((s) => s.readLockMultiplier)
 
   const equippedDef = WEAPON_DEFS[equippedWeaponId]
@@ -27,6 +28,9 @@ export function HangarScreen() {
 
   return (
     <div className="screen screen--hangar">
+      <button className="hangar__back" onClick={goToLobby}>
+        ← 출격 준비로
+      </button>
       <h1>격납고</h1>
       <p className="screen__subtitle">보유 부품 ⚙ {parts}</p>
 
