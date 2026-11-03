@@ -5,6 +5,11 @@
   overflow: hidden;
 }
 
+/* 전투 캔버스는 커스텀 조준 크로스헤어(.hud__crosshair)가 대신하므로 기본 커서를 숨긴다 */
+.app canvas {
+  cursor: none;
+}
+
 .screen {
   position: absolute;
   inset: 0;
@@ -267,13 +272,62 @@
 
 .hud__crosshair {
   position: absolute;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  pointer-events: none;
+}
+
+.hud__crosshair::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--hazard-yellow);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.08s linear;
+}
+
+.hud__crosshair::after {
+  content: '';
+  position: absolute;
   top: 50%;
   left: 50%;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border: 1px solid var(--text-cream);
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: var(--hazard-yellow);
   border-radius: 50%;
+  transition: background-color 0.08s linear;
+}
+
+.hud__crosshair--hit::before {
+  border-color: var(--danger-red);
+}
+
+.hud__crosshair--hit::after {
+  background: var(--danger-red);
+}
+
+.hud__crosshair--miss::before {
+  border-color: var(--hazard-yellow);
+}
+
+.hud__crosshair--miss::after {
+  background: var(--hazard-yellow);
+}
+
+.hud__crosshair-label {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-left: 10px;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-cream);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
 }
 
 /* --- 문제 모달 (공용) --- */

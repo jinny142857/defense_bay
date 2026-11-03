@@ -84,7 +84,13 @@ export function Mob({
   }
 
   return (
-    <group ref={groupRef} position={[startX, 0, startZ]} scale={scale} onClick={handleClick}>
+    <group
+      ref={groupRef}
+      position={[startX, 0, startZ]}
+      scale={scale}
+      onClick={handleClick}
+      userData={{ hittable: true }}
+    >
       <primitive object={model} />
     </group>
   )

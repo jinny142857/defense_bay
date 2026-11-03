@@ -78,7 +78,13 @@ export function SupplyBox({
   }
 
   return (
-    <group ref={groupRef} position={[startX, START_Y, startZ]} scale={MODEL_SCALE} onClick={handleClick}>
+    <group
+      ref={groupRef}
+      position={[startX, START_Y, startZ]}
+      scale={MODEL_SCALE}
+      onClick={handleClick}
+      userData={{ hittable: true }}
+    >
       <primitive object={model} />
     </group>
   )

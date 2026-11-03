@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
 import { Vector3 } from 'three'
+import type { Object3D } from 'three'
 import { Sea } from './Sea'
 import { Mountains } from './Mountains'
 import { SEA_FOG, SUN_DIRECTION } from './SeaWater.js'
@@ -12,7 +13,9 @@ import { SupplyBox } from './SupplyBox'
 import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
 import { Projectile } from './Projectile'
 import { MuzzleFlash } from './MuzzleFlash'
+import { ImpactEffect } from './ImpactEffect'
 import { triggerFireSignal } from './fireSignal'
+import { aimSignal } from './aimSignal'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
 import { useGameStore } from '../state/gameStore'
@@ -25,6 +28,9 @@ const MOB_SPAWN_Z_MAX = 800
 const BOX_Z = -16
 const BOX_GROUND_Y = -0.5
 const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
+const MUZZLE_VEC = new Vector3(...MUZZLE)
+const MOB_IMPACT_COLOR = '#ff5a36'
+const BOSS_IMPACT_COLOR = '#4ad9c9'
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
 const CAMERA_HOME = new Vector3(0, 2.6, -3.3)
 const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
@@ -51,6 +57,12 @@ interface Tracer {
   id: string
   from: [number, number, number]
   to: [number, number, number]
+}
+
+interface Impact {
+  id: string
+  position: [number, number, number]
+  color: string
 }
 
 function Spawner({ onSpawn }: { onSpawn: () => void }) {
@@ -131,11 +143,44 @@ function CameraRig() {
   return null
 }
 
+const aimHitPoint = new Vector3()
+
+// 매 프레임 포인터 위치로 레이캐스트해 "지금 쏘면 맞는지"를 판정, 2D HUD 크로스헤어(aimSignal)에
+// 공유한다. 명중 대상(몹/보급상자/보스)은 userData.hittable=true로 표시해 올라가며 판별한다.
+function AimRay() {
+  useFrame(({ pointer, camera, raycaster, scene }) => {
+    raycaster.setFromCamera(pointer, camera)
+    const hits = raycaster.intersectObjects(scene.children, true)
+    if (hits.length === 0) {
+      aimSignal.visible = false
+      return
+    }
+    const first = hits[0]
+    let obj: Object3D | null = first.object
+    let hittable = false
+    while (obj) {
+      if (obj.userData?.hittable) {
+        hittable = true
+        break
+      }
+      obj = obj.parent
+    }
+    aimHitPoint.copy(first.point)
+    aimSignal.visible = true
+    aimSignal.hit = hittable
+    aimSignal.screenX = (pointer.x + 1) / 2
+    aimSignal.screenY = (1 - pointer.y) / 2
+    aimSignal.distanceM = MUZZLE_VEC.distanceTo(aimHitPoint)
+  })
+  return null
+}
+
 function SceneContents() {
   const [mobs, setMobs] = useState<MobEntity[]>([])
   const [boxes, setBoxes] = useState<BoxEntity[]>([])
   const [tracers, setTracers] = useState<Tracer[]>([])
   const [flashes, setFlashes] = useState<{ id: string }[]>([])
+  const [impacts, setImpacts] = useState<Impact[]>([])
   const defeatCrab = useGameStore((s) => s.defeatCrab)
   const crabReachedBreakwater = useGameStore((s) => s.crabReachedBreakwater)
   const openSupplyBox = useGameStore((s) => s.openSupplyBox)
@@ -193,6 +238,11 @@ function SceneContents() {
     triggerFireSignal()
   }
 
+  const addImpact = (position: [number, number, number], color: string) => {
+    const id = `impact-${nextId.current++}`
+    setImpacts((list) => [...list, { id, position, color }])
+  }
+
   const handleMiss = (e: ThreeEvent<PointerEvent>) => {
     if (!tryFire()) return
     const p = e.point
@@ -202,6 +252,7 @@ function SceneContents() {
   return (
     <>
       <CameraRig />
+      <AimRay />
       <fog attach="fog" args={[SEA_FOG.color, SEA_FOG.near, SEA_FOG.far]} />
       <hemisphereLight args={[0xbac4c8, 0x1f3a40, 1.2]} />
       <directionalLight position={SUN_POSITION} intensity={1.6} color={0xffe2c0} castShadow />
@@ -213,8 +264,10 @@ function SceneContents() {
       <Turret />
       {waveNumber === 3 && bossTriggered && (
         <Boss
-          onHit={(targetWeak) => {
+          onHit={(targetWeak, point) => {
             if (!tryFire()) return
+            addTracer(point)
+            addImpact(point, BOSS_IMPACT_COLOR)
             damageBoss(targetWeak)
           }}
         />
@@ -228,6 +281,7 @@ function SceneContents() {
           onHit={(point) => {
             if (!tryFire()) return false
             addTracer(point)
+            addImpact(point, MOB_IMPACT_COLOR)
             setMobs((list) => list.filter((x) => x.id !== m.id))
             defeatCrab()
             return true
@@ -269,6 +323,14 @@ function SceneContents() {
           key={f.id}
           position={MUZZLE}
           onDone={() => setFlashes((list) => list.filter((x) => x.id !== f.id))}
+        />
+      ))}
+      {impacts.map((im) => (
+        <ImpactEffect
+          key={im.id}
+          position={im.position}
+          color={im.color}
+          onDone={() => setImpacts((list) => list.filter((x) => x.id !== im.id))}
         />
       ))}
     </>

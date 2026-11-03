@@ -35,7 +35,7 @@ export function Turret() {
     })
   }, [scene])
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const turretPivot = nodes.Turret_Pivot
     const gunPivot = nodes.Gun_Pivot
     const recoil = nodes.Barrel_Recoil
@@ -47,10 +47,12 @@ export function Turret() {
     }
     recoilRef.current *= RECOIL_DECAY
 
-    const targetYaw = pointer.x * 0.6
-    const targetPitch = -pointer.y * 0.3
-    turretPivot.rotation.y += (targetYaw - turretPivot.rotation.y) * 0.15
-    gunPivot.rotation.z += (targetPitch - gunPivot.rotation.z) * 0.15
+    // delta 기반 지수 보간 — 프레임레이트와 무관하게 "둔탁하지 않고" 민첩하게 커서를 따라가도록 한다.
+    const smoothing = 1 - Math.exp(-delta * 18)
+    const targetYaw = pointer.x * 0.7
+    const targetPitch = -pointer.y * 0.35
+    turretPivot.rotation.y += (targetYaw - turretPivot.rotation.y) * smoothing
+    gunPivot.rotation.z += (targetPitch - gunPivot.rotation.z) * smoothing
     recoil.position.x = -recoilRef.current * RECOIL_DISTANCE
   })
 

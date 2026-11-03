@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
+import { aimSignal } from '../game/aimSignal'
 import { BossHud } from './BossHud'
 import { QuestionModal } from './QuestionModal'
 
@@ -7,6 +9,43 @@ const BOX_LABELS: Record<string, string> = {
   parts: '부품 상자',
   bombard: '포격 지원 상자',
   repair: '정비 상자',
+}
+
+// aimSignal(Scene.tsx의 AimRay가 매 프레임 갱신)을 Canvas 밖 2D HUD에서 읽어 크로스헤어를
+// 그린다. 리렌더 없이 매 프레임 직접 스타일을 건드려야 해서 zustand가 아닌 rAF로 폴링한다.
+function AimCrosshair() {
+  const ref = useRef<HTMLDivElement>(null)
+  const labelRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    let raf: number
+    const tick = () => {
+      const el = ref.current
+      if (el) {
+        if (aimSignal.visible) {
+          el.style.display = ''
+          el.style.left = `${aimSignal.screenX * 100}%`
+          el.style.top = `${aimSignal.screenY * 100}%`
+          el.classList.toggle('hud__crosshair--hit', aimSignal.hit)
+          el.classList.toggle('hud__crosshair--miss', !aimSignal.hit)
+        } else {
+          el.style.display = 'none'
+        }
+      }
+      if (labelRef.current) {
+        labelRef.current.textContent = aimSignal.visible ? `${Math.round(aimSignal.distanceM)}m` : ''
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  return (
+    <div ref={ref} className="hud__crosshair">
+      <span ref={labelRef} className="hud__crosshair-label" />
+    </div>
+  )
 }
 
 export function CombatHUD() {
@@ -49,7 +88,7 @@ export function CombatHUD() {
           <div className="hud__durability-fill" style={{ width: `${durabilityPct}%` }} />
         </div>
       </div>
-      <div className="hud__crosshair" />
+      <AimCrosshair />
 
       {activeSupplyQuestion && (
         <QuestionModal

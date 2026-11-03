@@ -72,7 +72,11 @@ function useBossCombatTimers() {
 }
 
 // 산호 거신 실제 모델(PRD 7.4, 5.4, Blender MCP로 제작한 coral-titan.glb).
-export function Boss({ onHit }: { onHit: (targetWeak: boolean) => void }) {
+export function Boss({
+  onHit,
+}: {
+  onHit: (targetWeak: boolean, point: [number, number, number]) => void
+}) {
   const { scene } = useGLTF(MODEL_URL)
   const model = useMemo(() => scene.clone(true), [scene])
   const weakMeshes = useRef<Partial<Record<(typeof WEAK_NAMES)[number], Mesh>>>({})
@@ -144,11 +148,11 @@ export function Boss({ onHit }: { onHit: (targetWeak: boolean) => void }) {
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
-    onHit(e.object.name === activeName)
+    onHit(e.object.name === activeName, [e.point.x, e.point.y, e.point.z])
   }
 
   return (
-    <group ref={groupRef} position={[0, 0, COMBAT_Z]} scale={MODEL_SCALE}>
+    <group ref={groupRef} position={[0, 0, COMBAT_Z]} scale={MODEL_SCALE} userData={{ hittable: true }}>
       <primitive object={model} onClick={handleClick} />
     </group>
   )
