@@ -102,7 +102,15 @@ function Spawner({ onSpawn }: { onSpawn: () => void }) {
   return null
 }
 
-function SupplyBoxSpawner({ onSpawn }: { onSpawn: (type: SupplyBoxType) => void }) {
+function SupplyBoxSpawner({
+  onSpawn,
+  hasActiveBox,
+}: {
+  onSpawn: (type: SupplyBoxType) => void
+  // 보급상자는 한 번에 하나만 떠 있어야 하므로, 앞선 상자가 잡히거나 사라지기 전까지는 다음
+  // 상자를 띄우지 않는다(타이머는 그동안 멈춰 있다가 자리가 비면 이어서 센다).
+  hasActiveBox: boolean
+}) {
   const phase = useGameStore((s) => s.phase)
   const targetCount = useRef(
     balance.supplyBox.spawnMinPerWave +
@@ -112,7 +120,7 @@ function SupplyBoxSpawner({ onSpawn }: { onSpawn: (type: SupplyBoxType) => void 
   const timer = useRef(Math.random() * 4 + 3)
 
   useFrame((_, delta) => {
-    if (phase !== 'COMBAT' || spawnedCount.current >= targetCount.current) return
+    if (phase !== 'COMBAT' || spawnedCount.current >= targetCount.current || hasActiveBox) return
     timer.current -= delta
     if (timer.current <= 0) {
       spawnedCount.current += 1
@@ -292,7 +300,7 @@ function SceneContents() {
       <hemisphereLight args={[0xbac4c8, 0x1f3a40, 1.2]} />
       <directionalLight position={SUN_POSITION} intensity={1.6} color={0xffe2c0} castShadow />
       <Spawner onSpawn={spawnMob} />
-      <SupplyBoxSpawner onSpawn={spawnBox} />
+      <SupplyBoxSpawner onSpawn={spawnBox} hasActiveBox={boxes.length > 0} />
       <Sea onPointerDown={handleMiss} />
       <Mountains />
       <Breakwater />
@@ -329,13 +337,19 @@ function SceneContents() {
             addImpact(point, MOB_IMPACT_COLOR)
             addPopup(point, Math.round(damage).toString(), MOB_HIT_POPUP_COLOR)
           }}
-          onKilled={() => {
+          onKilled={(atWall) => {
             setMobs((list) => list.filter((x) => x.id !== m.id))
-            defeatCrab()
+            // 방파제에서 마무리 처치된 경우 내구도/남은 괴수는 onReachWall 때 이미 반영됐으므로
+            // 여기서 defeatCrab()을 또 부르면 이중 집계가 된다 — 조용히 치우기만 한다.
+            if (!atWall) defeatCrab()
           }}
           onReachWall={() => {
-            setMobs((list) => list.filter((x) => x.id !== m.id))
+            // 통계(내구도/남은 괴수)만 바로 반영 — 몹은 방파제에 들러붙어 "공격"하며 남아있다가
+            // 플레이어가 잡거나(onKilled) 시간이 지나 onExpire로 조용히 정리된다.
             crabReachedBreakwater()
+          }}
+          onExpire={() => {
+            setMobs((list) => list.filter((x) => x.id !== m.id))
           }}
         />
       ))}

@@ -7,10 +7,13 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import { raycastTargets } from './raycastRegistry'
+import { getWaveHeight } from './SeaWater.js'
 import type { SupplyBoxType } from '../types'
 
 const MODEL_URL = '/assets/supply-drop.glb'
 const MODEL_SCALE = 0.22
+// 수면에 닿으면 바로 사라지지 않고 파도에 떠서 흔들리다가, 그래도 안 주우면 그제서야 사라진다.
+const FLOAT_LIFETIME_SEC = 7
 
 // SupplyDrop.glb(SeaMobs_GameAssets)의 Beacon_Light로 상자 종류를 색으로 구분한다(PRD 3.3).
 const BEACON_COLORS: Record<SupplyBoxType, Color> = {
@@ -69,13 +72,27 @@ export function SupplyBox({
   }, [model, boxType])
 
   const fallSpeed = (START_Y - groundY) / balance.supplyBox.fallDurationSec
+  const floatingRef = useRef(false)
+  const floatAgeRef = useRef(0)
 
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     if (doneRef.current || !groupRef.current) return
     if (phase === 'BOSS_INTRO') return
     const speedMul = slow ? 0.15 : 1
-    groupRef.current.position.y -= fallSpeed * speedMul * delta
-    if (groupRef.current.position.y <= groundY) {
+
+    if (!floatingRef.current) {
+      groupRef.current.position.y -= fallSpeed * speedMul * delta
+      if (groupRef.current.position.y <= groundY) {
+        floatingRef.current = true
+        groupRef.current.position.y = groundY
+      }
+      return
+    }
+
+    // 수면 도달 후: 사라지지 않고 파도를 따라 둥둥 떠 있다가, 한참 안 주우면 그제서야 사라진다.
+    floatAgeRef.current += delta * speedMul
+    groupRef.current.position.y = getWaveHeight(startX, startZ, clock.getElapsedTime()) + groundY
+    if (floatAgeRef.current >= FLOAT_LIFETIME_SEC) {
       doneRef.current = true
       onLost()
     }
