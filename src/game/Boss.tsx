@@ -7,6 +7,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import { getWaveHeight } from './SeaWater.js'
+import { raycastTargets } from './raycastRegistry'
 
 const MODEL_URL = '/assets/boss-volcano-titan.glb'
 const MODEL_SCALE = 0.5
@@ -87,6 +88,15 @@ export function Boss({
   const phase = useGameStore((s) => s.phase)
 
   useBossCombatTimers()
+
+  useEffect(() => {
+    const g = groupRef.current
+    if (!g) return
+    raycastTargets.add(g)
+    return () => {
+      raycastTargets.delete(g)
+    }
+  }, [])
 
   useEffect(() => {
     weakMeshes.current = {}

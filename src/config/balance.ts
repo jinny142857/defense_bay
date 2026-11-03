@@ -29,9 +29,11 @@ export const balance = {
   // 몹 모델(SeaMobs_GameAssets, README_for_ClaudeCode.md 가이드)별 이동/잠김 수치.
   // speed: m/s, sink: 파도 높이 대비 잠기는 깊이(m). 게는 얕게, 거북두꺼비는 배까지 잠기도록 기본값을 둠.
   // 플레이 테스트하면서 숫자만 조절하면 됨.
+  // hp: 기본 포탄(고폭 포탄 공격력 64) 기준 게=2방, 두꺼비=4방 정도에 죽도록 잡은 값.
+  // 게 < 두꺼비 <<<< 보스(900) 순으로 맷집 차이를 둔다.
   mobs: {
-    crab: { speed: 9, sink: 0.35, scale: 1 },
-    frogTurtle: { speed: 6, sink: 0.9, scale: 1 },
+    crab: { speed: 9, sink: 0.35, scale: 1, hp: 100 },
+    frogTurtle: { speed: 6, sink: 0.9, scale: 1, hp: 220 },
   },
 
   // PRD 4.3 스테이지 1, 웨이브별 일반 몹 수 (3웨이브는 보스 포함)

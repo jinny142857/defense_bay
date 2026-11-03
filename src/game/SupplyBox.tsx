@@ -6,6 +6,7 @@ import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
+import { raycastTargets } from './raycastRegistry'
 import type { SupplyBoxType } from '../types'
 
 const MODEL_URL = '/assets/supply-drop.glb'
@@ -41,6 +42,15 @@ export function SupplyBox({
   const doneRef = useRef(false)
   const phase = useGameStore((s) => s.phase)
   const slow = useGameStore((s) => s.activeSupplyQuestion !== null)
+
+  useEffect(() => {
+    const g = groupRef.current
+    if (!g) return
+    raycastTargets.add(g)
+    return () => {
+      raycastTargets.delete(g)
+    }
+  }, [])
 
   useEffect(() => {
     const beaconColor = BEACON_COLORS[boxType]

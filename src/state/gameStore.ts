@@ -98,6 +98,7 @@ interface GameState {
 
   finishBossIntro: () => void
   damageBoss: (targetWeak: boolean) => { damage: number; critical: boolean } | null
+  getEffectiveAttack: () => number
   setBossExposed: (exposed: boolean) => void
   consumeBossExposureBonus: () => number
   telegraphBossAttack: () => void
@@ -140,6 +141,15 @@ function recordAttempt(
   const rapidStreak = isRapid ? s.rapidStreak + 1 : 0
   const readLockMultiplier = rapidStreak >= balance.diligence.rapidStreakForDoubleLock ? 2 : 1
   set({ stageAttempts: attempts, rapidStreak, readLockMultiplier })
+}
+
+// 장착 무기 기본 공격력에 강화 레벨/버프를 반영한 유효 공격력. damageBoss와 Mob.tsx의 몹 피격
+// 데미지 계산이 같은 공식을 쓰도록 여기 한 곳에 모은다.
+function getEffectiveAttack(get: GetFn): number {
+  const s = get()
+  const weapon = WEAPON_DEFS[s.equippedWeaponId]
+  const level = s.weaponLevels[s.equippedWeaponId] ?? 1
+  return weapon.baseAttack * (1 + balance.hangar.attackPctPerLevel * (level - 1)) * (1 + s.attackBuffPct)
 }
 
 function tryEnterDebrief(set: SetFn, get: GetFn) {
@@ -396,14 +406,13 @@ export const useGameStore = create<GameState>()(
       finishBossIntro: () => {
         set({ phase: 'COMBAT', bossActive: true })
       },
-    
+
+      getEffectiveAttack: () => getEffectiveAttack(get),
+
       damageBoss: (targetWeak) => {
         const s = get()
         if (!s.bossActive || s.bossDefeated) return null
-        const weapon = WEAPON_DEFS[s.equippedWeaponId]
-        const level = s.weaponLevels[s.equippedWeaponId] ?? 1
-        const effectiveAttack =
-          weapon.baseAttack * (1 + balance.hangar.attackPctPerLevel * (level - 1)) * (1 + s.attackBuffPct)
+        const effectiveAttack = getEffectiveAttack(get)
         const effectiveWeak = targetWeak && s.bossExposed
         const dmg = effectiveAttack * (effectiveWeak ? balance.boss.weakMultiplier : balance.boss.normalMultiplier)
         const nextHp = Math.max(0, s.bossHp - dmg)

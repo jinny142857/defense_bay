@@ -17,25 +17,25 @@ import { ImpactEffect } from './ImpactEffect'
 import { DamagePopup } from './DamagePopup'
 import { triggerFireSignal } from './fireSignal'
 import { aimSignal } from './aimSignal'
+import { raycastTargets } from './raycastRegistry'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
 import { useGameStore } from '../state/gameStore'
 import type { MobKind, SupplyBoxType } from '../types'
 
 // SeaEnvironment_GameAssets 가이드 좌표계: 원점 = 방파제/플레이어, 바다 쪽 = -Z, 1 unit = 1m
-// 가이드 권장치(600~800m)로 스폰하면 몹 모델이 실제 크기(1~2m) 대비 너무 멀어서 사실상 안 보이고
-// 안개(SEA_FOG.far=950, near=120)에도 거의 다 묻힌다. 등장하자마자 형체가 또렷이 보이도록
-// 안개 경계(near=120)보다 한참 안쪽에서 스폰한다.
-const MOB_SPAWN_X_SPREAD = 30
-const MOB_SPAWN_Z_MIN = 40
-const MOB_SPAWN_Z_MAX = 65
+// 가이드 권장치(600~800m)는 몹 모델 실제 크기(1~2m) 대비 너무 멀어서 사실상 안 보였고(안개도 한몫),
+// 반대로 40~65m는 등장하자마자 바로 코앞이라는 피드백을 받아 그 중간으로 다시 조정했다.
+const MOB_SPAWN_X_SPREAD = 55
+const MOB_SPAWN_Z_MIN = 90
+const MOB_SPAWN_Z_MAX = 130
 const BOX_Z = -16
 const BOX_GROUND_Y = -0.5
 const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
 const MUZZLE_VEC = new Vector3(...MUZZLE)
 const MOB_IMPACT_COLOR = '#ff5a36'
 const BOSS_IMPACT_COLOR = '#4ad9c9'
-const MOB_SCORE_POPUP_COLOR = '#4fd1a1'
+const MOB_HIT_POPUP_COLOR = '#f3e9d2'
 const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
 const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
@@ -163,10 +163,12 @@ const aimHitPoint = new Vector3()
 
 // 매 프레임 포인터 위치로 레이캐스트해 "지금 쏘면 맞는지"를 판정, 2D HUD 크로스헤어(aimSignal)에
 // 공유한다. 명중 대상(몹/보급상자/보스)은 userData.hittable=true로 표시해 올라가며 판별한다.
+// scene.children 전체(산/방파제/탱크 등 폴리곤 많은 배경 포함)를 매 프레임 훑으면 몹이 늘어날수록
+// 눈에 띄게 느려져서, 실제 조준 대상만 raycastRegistry에 등록해두고 그것만 레이캐스트한다.
 function AimRay() {
-  useFrame(({ pointer, camera, raycaster, scene }) => {
+  useFrame(({ pointer, camera, raycaster }) => {
     raycaster.setFromCamera(pointer, camera)
-    const hits = raycaster.intersectObjects(scene.children, true)
+    const hits = raycaster.intersectObjects([...raycastTargets], true)
     if (hits.length === 0) {
       aimSignal.visible = false
       return
@@ -316,11 +318,15 @@ function SceneContents() {
           onHit={(point) => {
             if (!tryFire()) return false
             addTracer(point)
+            return true
+          }}
+          onDamaged={(point, damage) => {
             addImpact(point, MOB_IMPACT_COLOR)
-            addPopup(point, `+${balance.score.crabDefeated}`, MOB_SCORE_POPUP_COLOR)
+            addPopup(point, Math.round(damage).toString(), MOB_HIT_POPUP_COLOR)
+          }}
+          onKilled={() => {
             setMobs((list) => list.filter((x) => x.id !== m.id))
             defeatCrab()
-            return true
           }}
           onReachWall={() => {
             setMobs((list) => list.filter((x) => x.id !== m.id))
