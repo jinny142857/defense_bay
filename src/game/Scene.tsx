@@ -25,10 +25,12 @@ import type { MobKind, SupplyBoxType } from '../types'
 
 // SeaEnvironment_GameAssets 가이드 좌표계: 원점 = 방파제/플레이어, 바다 쪽 = -Z, 1 unit = 1m
 // 가이드 권장치(600~800m)는 몹 모델 실제 크기(1~2m) 대비 너무 멀어서 사실상 안 보였고(안개도 한몫),
-// 반대로 40~65m는 등장하자마자 바로 코앞이라는 피드백을 받아 그 중간으로 다시 조정했다.
-const MOB_SPAWN_X_SPREAD = 55
-const MOB_SPAWN_Z_MIN = 90
-const MOB_SPAWN_Z_MAX = 130
+// 40~65m는 등장하자마자 바로 코앞이라 다가오는 느낌이 없었다. 안개(near=120) 경계 너머에서 작게
+// 희미하게 나타나 점점 또렷해지며 다가오도록 그 사이로 더 뒤로 보낸다(스폰 간격도 같이 늘려서
+// 한꺼번에 몰려오지 않게 한다 — balance.combat.crabSpawnIntervalSec 참고).
+const MOB_SPAWN_X_SPREAD = 100
+const MOB_SPAWN_Z_MIN = 180
+const MOB_SPAWN_Z_MAX = 260
 const BOX_Z = -16
 const BOX_GROUND_Y = -0.5
 const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
@@ -262,7 +264,10 @@ function SceneContents() {
 
   const addImpact = (position: [number, number, number], color: string) => {
     const id = `impact-${nextId.current++}`
-    setImpacts((list) => [...list, { id, position, color }])
+    // 명중 지점은 피격 대상 표면 위라서, 그 자리에 그대로 띄우면 섬광/파편이 모델 지오메트리에
+    // 가려 거의 안 보인다(addPopup과 동일 문제). 카메라 쪽으로 살짝 띄워서 확실히 보이게 한다.
+    const offsetPosition: [number, number, number] = [position[0], position[1], position[2] + 1.0]
+    setImpacts((list) => [...list, { id, position: offsetPosition, color }])
   }
 
   const addPopup = (position: [number, number, number], text: string, color: string) => {

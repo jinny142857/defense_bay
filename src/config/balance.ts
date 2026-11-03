@@ -23,7 +23,9 @@ export const balance = {
   combat: {
     breakwaterMaxDurability: 100,
     crabDamageOnHit: 10, // 몹이 방파제에 닿았을 때 피해
-    crabSpawnIntervalSec: 1.2,
+    // 스폰 거리를 멀리 늘린 만큼(Scene.tsx MOB_SPAWN_Z) 간격도 늘려야 동시에 몰려 보이는 몹 수가
+    // 늘지 않는다. 1.2초였을 때는 거의 전체 웨이브가 한꺼번에 바다 위에 떠 있는 것처럼 보였다.
+    crabSpawnIntervalSec: 3.0,
   },
 
   // 몹 모델(SeaMobs_GameAssets, README_for_ClaudeCode.md 가이드)별 이동/잠김 수치.
