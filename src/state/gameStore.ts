@@ -97,7 +97,7 @@ interface GameState {
   crabReachedBreakwater: () => void
 
   finishBossIntro: () => void
-  damageBoss: (targetWeak: boolean) => void
+  damageBoss: (targetWeak: boolean) => { damage: number; critical: boolean } | null
   setBossExposed: (exposed: boolean) => void
   consumeBossExposureBonus: () => number
   telegraphBossAttack: () => void
@@ -399,7 +399,7 @@ export const useGameStore = create<GameState>()(
     
       damageBoss: (targetWeak) => {
         const s = get()
-        if (!s.bossActive || s.bossDefeated) return
+        if (!s.bossActive || s.bossDefeated) return null
         const weapon = WEAPON_DEFS[s.equippedWeaponId]
         const level = s.weaponLevels[s.equippedWeaponId] ?? 1
         const effectiveAttack =
@@ -423,8 +423,9 @@ export const useGameStore = create<GameState>()(
         })
     
         if (defeated) tryEnterDebrief(set, get)
+        return { damage: dmg, critical: effectiveWeak }
       },
-    
+
       setBossExposed: (exposed) => set({ bossExposed: exposed }),
     
       consumeBossExposureBonus: () => {

@@ -14,6 +14,7 @@ import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
 import { Projectile } from './Projectile'
 import { MuzzleFlash } from './MuzzleFlash'
 import { ImpactEffect } from './ImpactEffect'
+import { DamagePopup } from './DamagePopup'
 import { triggerFireSignal } from './fireSignal'
 import { aimSignal } from './aimSignal'
 import { balance } from '../config/balance'
@@ -34,6 +35,9 @@ const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
 const MUZZLE_VEC = new Vector3(...MUZZLE)
 const MOB_IMPACT_COLOR = '#ff5a36'
 const BOSS_IMPACT_COLOR = '#4ad9c9'
+const MOB_SCORE_POPUP_COLOR = '#4fd1a1'
+const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
+const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
 const CAMERA_HOME = new Vector3(0, 2.6, -3.3)
 const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
@@ -68,8 +72,17 @@ interface Impact {
   color: string
 }
 
+interface Popup {
+  id: string
+  position: [number, number, number]
+  text: string
+  color: string
+}
+
 function Spawner({ onSpawn }: { onSpawn: () => void }) {
-  const timer = useRef(0)
+  // 웨이브 시작과 동시에 첫 몹이 바로 등장하도록 타이머를 스폰 간격만큼 미리 채워 둔다
+  // ("시작하면 바로 나와야" 피드백 — 첫 스폰까지 기다리는 공백을 없앤다).
+  const timer = useRef<number>(balance.combat.crabSpawnIntervalSec)
   const spawnedCount = useRef(0)
   const crabsTotal = useGameStore((s) => s.crabsTotal)
   const phase = useGameStore((s) => s.phase)
@@ -187,6 +200,7 @@ function SceneContents() {
   const [tracers, setTracers] = useState<Tracer[]>([])
   const [flashes, setFlashes] = useState<{ id: string }[]>([])
   const [impacts, setImpacts] = useState<Impact[]>([])
+  const [popups, setPopups] = useState<Popup[]>([])
   const defeatCrab = useGameStore((s) => s.defeatCrab)
   const crabReachedBreakwater = useGameStore((s) => s.crabReachedBreakwater)
   const openSupplyBox = useGameStore((s) => s.openSupplyBox)
@@ -249,6 +263,14 @@ function SceneContents() {
     setImpacts((list) => [...list, { id, position, color }])
   }
 
+  const addPopup = (position: [number, number, number], text: string, color: string) => {
+    const id = `popup-${nextId.current++}`
+    // 명중 지점은 피격 대상 표면 위라서, 그 자리에 그대로 띄우면 모델 자체 지오메트리에 가려
+    // 안 보이는 경우가 있다. 위쪽 + 카메라 쪽으로 살짝 띄워서 확실히 보이게 한다.
+    const offsetPosition: [number, number, number] = [position[0], position[1] + 0.9, position[2] + 1.0]
+    setPopups((list) => [...list, { id, position: offsetPosition, text, color }])
+  }
+
   const handleMiss = (e: ThreeEvent<PointerEvent>) => {
     if (!tryFire()) return
     const p = e.point
@@ -274,7 +296,14 @@ function SceneContents() {
             if (!tryFire()) return
             addTracer(point)
             addImpact(point, BOSS_IMPACT_COLOR)
-            damageBoss(targetWeak)
+            const result = damageBoss(targetWeak)
+            if (result) {
+              addPopup(
+                point,
+                Math.round(result.damage).toString(),
+                result.critical ? BOSS_CRIT_POPUP_COLOR : BOSS_NORMAL_POPUP_COLOR,
+              )
+            }
           }}
         />
       )}
@@ -288,6 +317,7 @@ function SceneContents() {
             if (!tryFire()) return false
             addTracer(point)
             addImpact(point, MOB_IMPACT_COLOR)
+            addPopup(point, `+${balance.score.crabDefeated}`, MOB_SCORE_POPUP_COLOR)
             setMobs((list) => list.filter((x) => x.id !== m.id))
             defeatCrab()
             return true
@@ -337,6 +367,15 @@ function SceneContents() {
           position={im.position}
           color={im.color}
           onDone={() => setImpacts((list) => list.filter((x) => x.id !== im.id))}
+        />
+      ))}
+      {popups.map((p) => (
+        <DamagePopup
+          key={p.id}
+          position={p.position}
+          text={p.text}
+          color={p.color}
+          onDone={() => setPopups((list) => list.filter((x) => x.id !== p.id))}
         />
       ))}
     </>
