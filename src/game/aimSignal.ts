@@ -6,4 +6,7 @@ export const aimSignal = {
   screenY: 0.5,
   hit: false, // true면 지금 조준 중인 지점에서 발사 시 몹/보스/보급상자에 명중
   distanceM: 0,
+  worldX: 0, // 조준 중인 지점의 월드 좌표 — Turret.tsx가 포신을 이 지점으로 직접 겨냥하는 데 사용
+  worldY: 0,
+  worldZ: 0,
 }

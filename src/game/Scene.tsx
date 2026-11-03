@@ -23,11 +23,11 @@ import type { MobKind, SupplyBoxType } from '../types'
 
 // SeaEnvironment_GameAssets 가이드 좌표계: 원점 = 방파제/플레이어, 바다 쪽 = -Z, 1 unit = 1m
 // 가이드 권장치(600~800m)로 스폰하면 몹 모델이 실제 크기(1~2m) 대비 너무 멀어서 사실상 안 보이고
-// 안개(SEA_FOG.far=950)에도 거의 다 묻힌다 — 안개 경계(near=120) 바로 너머에서 등장해 서서히
-// 짙은 안개를 뚫고 다가오는 정도로 거리를 좁힌다.
-const MOB_SPAWN_X_SPREAD = 80
-const MOB_SPAWN_Z_MIN = 140
-const MOB_SPAWN_Z_MAX = 220
+// 안개(SEA_FOG.far=950, near=120)에도 거의 다 묻힌다. 안개 경계 바로 안쪽(near=120보다 가까운
+// 범위)에서 또렷하게 등장하도록 거리를 확 좁혀, 줌 없이 봐도 바로 눈에 띄게 한다.
+const MOB_SPAWN_X_SPREAD = 50
+const MOB_SPAWN_Z_MIN = 70
+const MOB_SPAWN_Z_MAX = 110
 const BOX_Z = -16
 const BOX_GROUND_Y = -0.5
 const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
@@ -174,6 +174,9 @@ function AimRay() {
     aimSignal.screenX = (pointer.x + 1) / 2
     aimSignal.screenY = (1 - pointer.y) / 2
     aimSignal.distanceM = MUZZLE_VEC.distanceTo(aimHitPoint)
+    aimSignal.worldX = aimHitPoint.x
+    aimSignal.worldY = aimHitPoint.y
+    aimSignal.worldZ = aimHitPoint.z
   })
   return null
 }
