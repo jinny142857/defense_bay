@@ -22,9 +22,12 @@ import { useGameStore } from '../state/gameStore'
 import type { MobKind, SupplyBoxType } from '../types'
 
 // SeaEnvironment_GameAssets 가이드 좌표계: 원점 = 방파제/플레이어, 바다 쪽 = -Z, 1 unit = 1m
-const MOB_SPAWN_X_SPREAD = 300
-const MOB_SPAWN_Z_MIN = 600
-const MOB_SPAWN_Z_MAX = 800
+// 가이드 권장치(600~800m)로 스폰하면 몹 모델이 실제 크기(1~2m) 대비 너무 멀어서 사실상 안 보이고
+// 안개(SEA_FOG.far=950)에도 거의 다 묻힌다 — 안개 경계(near=120) 바로 너머에서 등장해 서서히
+// 짙은 안개를 뚫고 다가오는 정도로 거리를 좁힌다.
+const MOB_SPAWN_X_SPREAD = 80
+const MOB_SPAWN_Z_MIN = 140
+const MOB_SPAWN_Z_MAX = 220
 const BOX_Z = -16
 const BOX_GROUND_Y = -0.5
 const MUZZLE: [number, number, number] = [0, 1.63, -8.3]

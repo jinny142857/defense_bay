@@ -48,8 +48,10 @@ export function Turret() {
     recoilRef.current *= RECOIL_DECAY
 
     // delta 기반 지수 보간 — 프레임레이트와 무관하게 "둔탁하지 않고" 민첩하게 커서를 따라가도록 한다.
-    const smoothing = 1 - Math.exp(-delta * 18)
-    const targetYaw = pointer.x * 0.7
+    // Turret_Pivot의 +Y 회전은 래퍼의 +90도 회전과 합성되어 화면상 "오른쪽(pointer.x>0)"일 때
+    // 전방이 반대로(-X 쪽) 돌아가므로 부호를 반전한다.
+    const smoothing = 1 - Math.exp(-delta * 30)
+    const targetYaw = -pointer.x * 0.8
     const targetPitch = -pointer.y * 0.35
     turretPivot.rotation.y += (targetYaw - turretPivot.rotation.y) * smoothing
     gunPivot.rotation.z += (targetPitch - gunPivot.rotation.z) * smoothing
