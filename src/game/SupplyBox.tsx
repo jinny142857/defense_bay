@@ -36,7 +36,7 @@ export function SupplyBox({
   startX: number
   startZ: number
   groundY: number
-  onCatch: () => boolean
+  onCatch: (point: [number, number, number]) => boolean
   onLost: () => void
 }) {
   const { scene } = useGLTF(MODEL_URL)
@@ -101,7 +101,8 @@ export function SupplyBox({
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
     if (doneRef.current) return
-    if (onCatch()) doneRef.current = true
+    const point: [number, number, number] = [e.point.x, e.point.y, e.point.z]
+    if (onCatch(point)) doneRef.current = true
   }
 
   return (
@@ -113,6 +114,12 @@ export function SupplyBox({
       userData={{ hittable: true }}
     >
       <primitive object={model} />
+      {/* 모델 자체는 작고 낙하 중엔 빠르게 움직여 정확히 맞히기 어렵다는 피드백 — 보이지는
+          않지만 넉넉한 구 모양 히트박스를 겹쳐 둬서 클릭 판정을 관대하게 한다. */}
+      <mesh>
+        <sphereGeometry args={[5, 8, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
     </group>
   )
 }

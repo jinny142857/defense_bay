@@ -38,6 +38,7 @@ const MUZZLE_VEC = new Vector3(...MUZZLE)
 const MOB_IMPACT_COLOR = '#ff5a36'
 const BOSS_IMPACT_COLOR = '#4ad9c9'
 const MOB_HIT_POPUP_COLOR = '#f3e9d2'
+const BOX_IMPACT_COLOR = '#ffd36b'
 const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
 const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
@@ -360,12 +361,14 @@ function SceneContents() {
           startX={b.startX}
           startZ={BOX_Z}
           groundY={BOX_GROUND_Y}
-          onCatch={() => {
+          onCatch={(point) => {
             if (!tryFire()) return false
+            addTracer(point)
             // 문제를 실제로 띄울 수 있을 때만 상자를 치운다 — 실패하면(드물게 이미 다른 문제가
             // 떠 있는 경우 등) 상자가 그대로 남아 다시 시도할 수 있다("맞혔는데 문제가 안 뜨고
             // 상자만 사라지는" 버그 방지).
             if (!openSupplyBox(b.boxType)) return false
+            addImpact(point, BOX_IMPACT_COLOR)
             setBoxes((list) => list.filter((x) => x.id !== b.id))
             return true
           }}

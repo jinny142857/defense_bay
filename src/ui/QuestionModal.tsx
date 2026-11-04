@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Question } from '../types'
+import { MathText } from './MathText'
 
 // PRD 3.6 성실 풀이 장치: 읽기 시간 잠금 + 보기 셔플, 오답 시 해설 최소 노출 + '이해했어요' 게이트
 function shuffleIndices(length: number): number[] {
@@ -75,7 +76,9 @@ export function QuestionModal({
           <span className="question-modal__subject">{question.subject}</span>
           <span className="question-modal__context">{contextLabel}</span>
         </div>
-        <p className="question-modal__stem">{question.stem}</p>
+        <p className="question-modal__stem">
+          <MathText text={question.stem} />
+        </p>
 
         {!explaining && (
           <div className="question-modal__choices">
@@ -93,7 +96,7 @@ export function QuestionModal({
                   onClick={() => handleChoose(originalIndex)}
                 >
                   <span className="question-modal__choice-badge">{pos + 1}</span>
-                  {question.choices[originalIndex]}
+                  <MathText text={question.choices[originalIndex]} />
                 </button>
               )
             })}
@@ -105,7 +108,9 @@ export function QuestionModal({
         {explaining && (
           <div className="question-modal__explanation">
             <p className="question-modal__explanation-title">해설</p>
-            <p>{question.explanation}</p>
+            <p>
+              <MathText text={question.explanation} />
+            </p>
             <button
               className="question-modal__ack"
               disabled={!explainReady}

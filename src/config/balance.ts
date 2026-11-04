@@ -35,9 +35,10 @@ export const balance = {
   // 게 < 두꺼비 <<<< 보스(900) 순으로 맷집 차이를 둔다.
   // sink을 줄여서 완전히 잠기지 않고 몸의 절반 정도가 수면 위로 보이게 했고(특히 두꺼비가
   // 너무 깊이 잠겨 있었음), speed도 더 늦춰서 다가오는 게 위협적으로 느껴지게 했다.
+  // scale: 원본 모델이 방파제/탱크 대비 너무 커서 축소(게가 더 작고 민첩, 두꺼비가 더 큼).
   mobs: {
-    crab: { speed: 5, sink: 0.12, scale: 1, hp: 100 },
-    frogTurtle: { speed: 3.2, sink: 0.3, scale: 1, hp: 220 },
+    crab: { speed: 5, sink: 0.12, scale: 0.55, hp: 100 },
+    frogTurtle: { speed: 3.2, sink: 0.3, scale: 0.7, hp: 220 },
   },
 
   // PRD 4.3 스테이지 1, 웨이브별 일반 몹 수 (3웨이브는 보스 포함)

@@ -21,7 +21,9 @@ const HEALTH_BAR_Y: Record<MobKind, number> = {
   crab: 2.0,
   frogTurtle: 2.5,
 }
-const WALL_TRIGGER_Z = -5
+// 방파제 몸체(Breakwater.tsx)의 바다 쪽 면이 z=-7 부근이라, 거기서 멈춰야 벽을 넘어 들어오지
+// 않는다(예전 -5는 벽 안쪽, 탱크(z=-6)보다도 더 앞까지 들어와 버리는 값이었다).
+const WALL_TRIGGER_Z = -7.3
 // 방파제에 닿은 뒤 죽이지 못하면 이 시간만큼 들러붙어 "공격"하다가 사라진다(내구도 피해는
 // 닿는 순간 이미 한 번 적용됨 — 계속 눌러앉아 있는 게 아니라 정리용 타임아웃).
 const WALL_LINGER_SEC = 6
