@@ -91,6 +91,7 @@ export function CombatHUD() {
 
       {activeSupplyQuestion && (
         <QuestionModal
+          key={activeSupplyQuestion.question.id}
           question={activeSupplyQuestion.question}
           contextLabel={`보급상자 · ${BOX_LABELS[activeSupplyQuestion.boxType]}`}
           onAnswer={(choice, _correct, responseMs) => answerSupplyBox(choice, responseMs)}

@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import { QuestionModal } from './QuestionModal'
 
+// "복기 시작"을 눌러야 문제가 시작된다(출격 점검과 같은 패턴) — 전투 요약만 먼저 보여주고,
+// 시작하면 3문제가 끊기지 않고 이어진다.
 export function DebriefScreen() {
   const crabsDefeated = useGameStore((s) => s.crabsDefeated)
   const durability = useGameStore((s) => s.durability)
@@ -9,6 +12,7 @@ export function DebriefScreen() {
   const debriefAttempts = useGameStore((s) => s.debriefAttempts)
   const answerDebrief = useGameStore((s) => s.answerDebrief)
   const waveNumber = useGameStore((s) => s.waveNumber)
+  const [started, setStarted] = useState(false)
 
   const current = debriefQuestions[debriefAttempts.length]
   const answeredCount = debriefAttempts.length
@@ -31,8 +35,15 @@ export function DebriefScreen() {
         ))}
       </ul>
 
-      {current && (
+      {!started && (
+        <button className="precheck__start" onClick={() => setStarted(true)}>
+          복기 시작
+        </button>
+      )}
+
+      {started && current && (
         <QuestionModal
+          key={current.id}
           question={current}
           contextLabel={`전투 복기 ${answeredCount + 1}/3`}
           onAnswer={(choice, _correct, responseMs) => answerDebrief(choice, responseMs)}

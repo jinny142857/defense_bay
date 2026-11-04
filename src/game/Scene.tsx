@@ -84,7 +84,7 @@ interface Popup {
   color: string
 }
 
-function Spawner({ onSpawn }: { onSpawn: () => void }) {
+function Spawner({ onSpawn }: { onSpawn: (progress: number) => void }) {
   // 웨이브 시작과 동시에 첫 몹이 바로 등장하도록 타이머를 스폰 간격만큼 미리 채워 둔다
   // ("시작하면 바로 나와야" 피드백 — 첫 스폰까지 기다리는 공백을 없앤다).
   const timer = useRef<number>(balance.combat.crabSpawnIntervalSec)
@@ -97,8 +97,9 @@ function Spawner({ onSpawn }: { onSpawn: () => void }) {
     timer.current += delta
     if (timer.current >= balance.combat.crabSpawnIntervalSec) {
       timer.current = 0
+      // 웨이브 안에서 몇 번째 스폰인지(0~1) — 초반엔 게부터, 뒤로 갈수록 두꺼비가 섞이게 한다.
+      onSpawn(spawnedCount.current / crabsTotal)
       spawnedCount.current += 1
-      onSpawn()
     }
   })
 
@@ -252,11 +253,14 @@ function SceneContents() {
     return true
   }
 
-  const spawnMob = () => {
+  const spawnMob = (progress: number) => {
     const id = `mob-${nextId.current++}`
     const startX = (Math.random() - 0.5) * MOB_SPAWN_X_SPREAD
     const startZ = -(MOB_SPAWN_Z_MIN + Math.random() * (MOB_SPAWN_Z_MAX - MOB_SPAWN_Z_MIN))
-    const kind: MobKind = Math.random() < 0.5 ? 'crab' : 'frogTurtle'
+    // 초반 35%는 전부 게, 그 뒤로는 두꺼비 비중이 점점 늘어난다("게가 먼저 오고 두꺼비가 뒤에
+    // 섞이면 좋겠다"는 피드백 — 완전 무작위 50/50이면 두꺼비가 바로 처음부터 튀어나올 수 있었다).
+    const frogChance = progress < 0.35 ? 0 : (progress - 0.35) / 0.65
+    const kind: MobKind = Math.random() < frogChance ? 'frogTurtle' : 'crab'
     setMobs((list) => [...list, { id, kind, startX, startZ }])
   }
 

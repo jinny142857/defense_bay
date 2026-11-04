@@ -53,6 +53,7 @@ export function MaintenanceScreen() {
 
       {openModal === 'repair' && repairQuestion && (
         <QuestionModal
+          key={repairQuestion.id}
           question={repairQuestion}
           contextLabel="정비 · 방파제 수리"
           onAnswer={(choice, _correct, responseMs) => {
@@ -64,6 +65,7 @@ export function MaintenanceScreen() {
 
       {openModal === 'bonus' && bonusQuestion && (
         <QuestionModal
+          key={bonusQuestion.id}
           question={bonusQuestion}
           contextLabel={`정비 · 보너스 문제 (남은 기회 ${bonusRemaining})`}
           onAnswer={(choice, _correct, responseMs) => {

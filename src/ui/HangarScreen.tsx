@@ -109,6 +109,7 @@ export function HangarScreen() {
 
       {pendingUpgrade && (
         <QuestionModal
+          key={pendingUpgrade.question.id}
           question={pendingUpgrade.question}
           contextLabel={`격납고 · 강화 확인 (Lv.${pendingUpgrade.nextLevel})`}
           onAnswer={(choice, _correct, responseMs) => answerUpgrade(choice, responseMs)}

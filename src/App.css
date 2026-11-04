@@ -234,6 +234,24 @@
   font-weight: 700;
 }
 
+.precheck__card-effect {
+  font-size: 0.8rem;
+  color: var(--text-cream);
+  opacity: 0.75;
+  margin: 0;
+  flex: 1;
+}
+
+.precheck__start {
+  margin-top: 24px;
+  padding: 12px 32px;
+  background: linear-gradient(90deg, var(--accent-orange-1), var(--accent-orange-2));
+  border: none;
+  color: var(--text-cream);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
 /* --- 전투 HUD --- */
 .hud {
   position: absolute;
