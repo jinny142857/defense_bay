@@ -5,11 +5,15 @@ import type { PointLight, Sprite, SpriteMaterial } from 'three'
 import { emberTexture, fireTexture, flashTexture, smokeTexture } from './vfxTextures'
 
 const IMPACT_LIFETIME_SEC = 1.2
-// 섬광/화염/파편은 전체 수명의 이 비율 안에서 빠르게 터지고 끝난다("펑").
-const BURST_FRACTION = 0.3
+// 섬광/화염/파편은 전체 수명의 이 비율 안에서 "펑" 터지고 사그라든다.
+const BURST_FRACTION = 0.45
 const FLASH_FRACTION = 0.1
+// 화염 코어가 burstT=0부터 바로 옅어지기 시작하면 한 프레임도 제대로 타오르지 못하고 사라져
+// "불꽃이 안 보인다"는 피드백으로 이어졌다 — 번쩍인 뒤 이 지점까지는 거의 풀밝기를 유지하다가
+// 남은 구간에서 꺼지도록 커브를 바꾼다.
+const FIRE_HOLD_FRACTION = 0.55
 const SPARK_COUNT = 8
-const SMOKE_COUNT = 7
+const SMOKE_COUNT = 5
 
 function randomSparkDir() {
   const theta = Math.random() * Math.PI * 2
@@ -61,8 +65,10 @@ export function ImpactEffect({
     }
     if (fireRef.current) {
       const mat = fireRef.current.material as SpriteMaterial
-      mat.opacity = burstFade
-      fireRef.current.scale.setScalar(0.9 + burstT * 3.4)
+      const fireOpacity =
+        burstT < FIRE_HOLD_FRACTION ? 1 : 1 - (burstT - FIRE_HOLD_FRACTION) / (1 - FIRE_HOLD_FRACTION)
+      mat.opacity = Math.max(0, fireOpacity)
+      fireRef.current.scale.setScalar(1.4 + Math.min(burstT, FIRE_HOLD_FRACTION) * 4.2)
     }
     sparkRefs.current.forEach((spark, i) => {
       if (!spark) return
@@ -78,11 +84,12 @@ export function ImpactEffect({
     smokeRefs.current.forEach((smoke, i) => {
       if (!smoke) return
       const off = smokeOffsets[i]
-      const bloom = Math.min(1, t / 0.4) // 처음 40% 동안 빠르게 부풀어 오른다
+      // 화염이 먼저 눈에 띄도록 살짝 늦게 피어오르기 시작한다(바로 뒤덮으면 불꽃이 묻혀 버린다).
+      const bloom = Math.min(1, Math.max(0, (t - 0.12) / 0.35))
       smoke.position.set(off.x * (0.5 + t * 0.8), 0.2 + t * 1.6 + off.y, off.z * (0.5 + t * 0.8))
       const mat = smoke.material as SpriteMaterial
-      mat.opacity = Math.max(0, fade * 0.85 * bloom)
-      smoke.scale.setScalar(0.7 + bloom * 3.0 + t * 1.2)
+      mat.opacity = Math.max(0, fade * 0.75 * bloom)
+      smoke.scale.setScalar(0.35 + bloom * 1.0 + t * 0.35)
     })
     if (lightRef.current) lightRef.current.intensity = 35 * burstFade * burstFade
     if (next >= IMPACT_LIFETIME_SEC) onDone()
