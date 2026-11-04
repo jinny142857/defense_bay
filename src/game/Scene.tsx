@@ -32,7 +32,9 @@ const MOB_SPAWN_X_SPREAD = 100
 const MOB_SPAWN_Z_MIN = 180
 const MOB_SPAWN_Z_MAX = 260
 const BOX_Z = -16
-const BOX_GROUND_Y = -0.5
+// SupplyBox가 모델의 실제 바닥(튜브)을 기준으로 이 높이에 맞춰 띄우므로, 이제는 수면 자체의
+// 높이(0 부근)만 쓰면 된다 — 살짝 음수로 둬서 튜브가 물에 약간 잠긴 듯 보이게 한다.
+const BOX_GROUND_Y = -0.05
 const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
 const MUZZLE_VEC = new Vector3(...MUZZLE)
 const MOB_IMPACT_COLOR = '#ff5a36'

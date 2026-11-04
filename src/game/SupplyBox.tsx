@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Color, MeshStandardMaterial } from 'three'
+import { Box3, Color, MeshStandardMaterial } from 'three'
 import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
@@ -41,6 +41,10 @@ export function SupplyBox({
 }) {
   const { scene } = useGLTF(MODEL_URL)
   const model = useMemo(() => scene.clone(true), [scene])
+  // 모델의 피벗(원점)이 튜브/상자 바닥과 정확히 일치하지 않는다 — 튜브(Float_Ring/Float_Band)가
+  // 먼저 수면에 닿아야 한다는 피드백이라, 실제 지오메트리의 최하단을 재서 그 지점이 수면에 오도록
+  // 보정한다(하드코딩된 오프셋 대신 모델 자체를 기준으로 삼아 모델이 바뀌어도 안 틀어진다).
+  const bottomOffset = useMemo(() => new Box3().setFromObject(model).min.y, [model])
   const groupRef = useRef<Group>(null)
   const doneRef = useRef(false)
   const phase = useGameStore((s) => s.phase)
@@ -71,7 +75,9 @@ export function SupplyBox({
     })
   }, [model, boxType])
 
-  const fallSpeed = (START_Y - groundY) / balance.supplyBox.fallDurationSec
+  // 모델 바닥(튜브)이 groundY(수면)에 오도록, 피벗 기준 목표 Y를 보정한다.
+  const restY = groundY - bottomOffset * MODEL_SCALE
+  const fallSpeed = (START_Y - restY) / balance.supplyBox.fallDurationSec
   const floatingRef = useRef(false)
   const floatAgeRef = useRef(0)
 
@@ -82,16 +88,16 @@ export function SupplyBox({
 
     if (!floatingRef.current) {
       groupRef.current.position.y -= fallSpeed * speedMul * delta
-      if (groupRef.current.position.y <= groundY) {
+      if (groupRef.current.position.y <= restY) {
         floatingRef.current = true
-        groupRef.current.position.y = groundY
+        groupRef.current.position.y = restY
       }
       return
     }
 
     // 수면 도달 후: 사라지지 않고 파도를 따라 둥둥 떠 있다가, 한참 안 주우면 그제서야 사라진다.
     floatAgeRef.current += delta * speedMul
-    groupRef.current.position.y = getWaveHeight(startX, startZ, clock.getElapsedTime()) + groundY
+    groupRef.current.position.y = getWaveHeight(startX, startZ, clock.getElapsedTime()) + restY
     if (floatAgeRef.current >= FLOAT_LIFETIME_SEC) {
       doneRef.current = true
       onLost()

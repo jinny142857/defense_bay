@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { DoubleSide, Vector3 } from 'three'
-import type { Mesh, MeshBasicMaterial, PointLight } from 'three'
+import { AdditiveBlending, Color, Vector3 } from 'three'
+import type { PointLight, Sprite, SpriteMaterial } from 'three'
+import { emberTexture, fireTexture, flashTexture, smokeTexture } from './vfxTextures'
 
 const IMPACT_LIFETIME_SEC = 1.2
-// 섬광/충격파/파편은 전체 수명의 이 비율 안에서 빠르게 터지고 끝난다("펑").
+// 섬광/화염/파편은 전체 수명의 이 비율 안에서 빠르게 터지고 끝난다("펑").
 const BURST_FRACTION = 0.3
 const FLASH_FRACTION = 0.1
 const SPARK_COUNT = 8
@@ -20,10 +21,11 @@ function randomSmokeOffset() {
   return new Vector3((Math.random() - 0.5) * 0.9, Math.random() * 0.3, (Math.random() - 0.5) * 0.9)
 }
 
-// 명중 시 "맞았다"는 걸 확실히 보여주는 탄착 이펙트: 초반에 하얗게 번쩍하는 섬광 + 2단 충격파 링 +
-// 사방으로 튀는 파편 스파크로 "펑" 터지고, 그 자리에 밝은 회백색 연기 뭉치가 뭉게뭉게 부풀어 오르며
-// 눈에 띄게 남았다가 서서히 사라진다 — 포탄이 맞았을 때의 폭연처럼 멀리서도 또렷이 보여야 한다
-// (링/섬광만으로는 반짝임 수준이라는 피드백, 참고 레퍼런스의 또렷한 포연 덩어리를 기준으로 삼는다).
+// 명중 시 "맞았다"는 걸 확실히 보여주는 탄착 이펙트. 평평한 구체/링 지오메트리는 입체감 없는
+// "색칠된 공"으로 보여서, 그라디언트 텍스처를 입힌 스프라이트(항상 카메라를 향함)로 전부 교체했다:
+// 하얗게 번쩍하는 섬광 + 주황빛 화염 코어 + 사방으로 튀는 불씨 파편으로 "펑" 터지고, 그 자리에
+// 밝은 회백색 연기 뭉치가(일반 알파 블렌딩이라 실제 연기처럼 불투명하게) 뭉게뭉게 부풀어 오르며
+// 눈에 띄게 남았다가 서서히 사라진다.
 export function ImpactEffect({
   position,
   color = '#ff5a36',
@@ -34,15 +36,14 @@ export function ImpactEffect({
   onDone: () => void
 }) {
   const [age, setAge] = useState(0)
-  const flashRef = useRef<Mesh>(null)
-  const coreRef = useRef<Mesh>(null)
-  const ringRef = useRef<Mesh>(null)
-  const outerRingRef = useRef<Mesh>(null)
+  const flashRef = useRef<Sprite>(null)
+  const fireRef = useRef<Sprite>(null)
   const lightRef = useRef<PointLight>(null)
-  const sparkRefs = useRef<(Mesh | null)[]>([])
-  const smokeRefs = useRef<(Mesh | null)[]>([])
+  const sparkRefs = useRef<(Sprite | null)[]>([])
+  const smokeRefs = useRef<(Sprite | null)[]>([])
   const sparkDirs = useMemo(() => Array.from({ length: SPARK_COUNT }, randomSparkDir), [])
   const smokeOffsets = useMemo(() => Array.from({ length: SMOKE_COUNT }, randomSmokeOffset), [])
+  const fireColor = useMemo(() => new Color(color), [color])
 
   useFrame((_, delta) => {
     const next = age + delta
@@ -54,33 +55,23 @@ export function ImpactEffect({
 
     if (flashRef.current) {
       const flashT = Math.min(1, next / (IMPACT_LIFETIME_SEC * FLASH_FRACTION))
-      const mat = flashRef.current.material as MeshBasicMaterial
+      const mat = flashRef.current.material as SpriteMaterial
       mat.opacity = Math.max(0, 1 - flashT)
-      flashRef.current.scale.setScalar(0.7 + flashT * 3.2)
+      flashRef.current.scale.setScalar(1.0 + flashT * 3.6)
     }
-    if (coreRef.current) {
-      const mat = coreRef.current.material as MeshBasicMaterial
+    if (fireRef.current) {
+      const mat = fireRef.current.material as SpriteMaterial
       mat.opacity = burstFade
-      coreRef.current.scale.setScalar(0.7 + burstT * 2.2)
-    }
-    if (ringRef.current) {
-      const mat = ringRef.current.material as MeshBasicMaterial
-      mat.opacity = burstFade * 0.9
-      ringRef.current.scale.setScalar(0.4 + burstT * 7)
-    }
-    if (outerRingRef.current) {
-      const mat = outerRingRef.current.material as MeshBasicMaterial
-      mat.opacity = burstFade * 0.5
-      outerRingRef.current.scale.setScalar(0.6 + burstT * 10)
+      fireRef.current.scale.setScalar(0.9 + burstT * 3.4)
     }
     sparkRefs.current.forEach((spark, i) => {
       if (!spark) return
       const dir = sparkDirs[i]
       const dist = burstT * 2.6 * (0.7 + (i % 3) * 0.15)
       spark.position.set(dir.x * dist, dir.y * dist, dir.z * dist)
-      const mat = spark.material as MeshBasicMaterial
+      const mat = spark.material as SpriteMaterial
       mat.opacity = burstFade
-      spark.scale.setScalar(0.03 + burstFade * 0.16)
+      spark.scale.setScalar(0.1 + burstFade * 0.35)
     })
     // 연기: 포탄이 터진 자리에 뭉게뭉게 부풀어 오르는 포연 덩어리 — 밝은 회백색이라 어두운 바다/
     // 몹/보스를 배경으로도 또렷이 보이고, 전체 수명 내내 남아있다가 끝에서야 옅어진다.
@@ -89,54 +80,56 @@ export function ImpactEffect({
       const off = smokeOffsets[i]
       const bloom = Math.min(1, t / 0.4) // 처음 40% 동안 빠르게 부풀어 오른다
       smoke.position.set(off.x * (0.5 + t * 0.8), 0.2 + t * 1.6 + off.y, off.z * (0.5 + t * 0.8))
-      const mat = smoke.material as MeshBasicMaterial
+      const mat = smoke.material as SpriteMaterial
       mat.opacity = Math.max(0, fade * 0.85 * bloom)
-      smoke.scale.setScalar(0.35 + bloom * 1.5 + t * 0.6)
+      smoke.scale.setScalar(0.7 + bloom * 3.0 + t * 1.2)
     })
-    if (lightRef.current) lightRef.current.intensity = 30 * burstFade * burstFade
+    if (lightRef.current) lightRef.current.intensity = 35 * burstFade * burstFade
     if (next >= IMPACT_LIFETIME_SEC) onDone()
   })
 
   return (
     <group position={position}>
-      <pointLight ref={lightRef} color={color} intensity={30} distance={10} />
-      <mesh ref={flashRef}>
-        <sphereGeometry args={[0.3, 10, 10]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={1} />
-      </mesh>
-      <mesh ref={coreRef}>
-        <sphereGeometry args={[0.3, 10, 10]} />
-        <meshBasicMaterial color="#fff6d8" transparent opacity={1} />
-      </mesh>
-      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.32, 0.52, 24]} />
-        <meshBasicMaterial color={color} transparent opacity={1} side={DoubleSide} />
-      </mesh>
-      <mesh ref={outerRingRef} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.42, 0.52, 24]} />
-        <meshBasicMaterial color="#fff6d8" transparent opacity={0.6} side={DoubleSide} />
-      </mesh>
+      <pointLight ref={lightRef} color={color} intensity={35} distance={10} />
+      <sprite ref={flashRef}>
+        <spriteMaterial map={flashTexture} transparent opacity={1} blending={AdditiveBlending} depthWrite={false} />
+      </sprite>
+      <sprite ref={fireRef}>
+        <spriteMaterial
+          map={fireTexture}
+          color={fireColor}
+          transparent
+          opacity={1}
+          blending={AdditiveBlending}
+          depthWrite={false}
+        />
+      </sprite>
       {sparkDirs.map((_, i) => (
-        <mesh
+        <sprite
           key={`spark-${i}`}
           ref={(el) => {
             sparkRefs.current[i] = el
           }}
         >
-          <sphereGeometry args={[1, 6, 6]} />
-          <meshBasicMaterial color={color} transparent opacity={1} />
-        </mesh>
+          <spriteMaterial
+            map={emberTexture}
+            color={fireColor}
+            transparent
+            opacity={1}
+            blending={AdditiveBlending}
+            depthWrite={false}
+          />
+        </sprite>
       ))}
       {smokeOffsets.map((_, i) => (
-        <mesh
+        <sprite
           key={`smoke-${i}`}
           ref={(el) => {
             smokeRefs.current[i] = el
           }}
         >
-          <sphereGeometry args={[1, 8, 8]} />
-          <meshBasicMaterial color="#cfc9bd" transparent opacity={0} depthWrite={false} />
-        </mesh>
+          <spriteMaterial map={smokeTexture} transparent opacity={0} depthWrite={false} />
+        </sprite>
       ))}
     </group>
   )
