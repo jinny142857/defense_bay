@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Question } from '../types'
 import { MathText } from './MathText'
 
-// PRD 3.6 성실 풀이 장치: 읽기 시간 잠금 + 보기 셔플, 오답 시 해설 최소 노출 + '이해했어요' 게이트
+// 보기 순서를 섞어서 "위치로 외우기"를 막는다.
 function shuffleIndices(length: number): number[] {
   const idx = Array.from({ length }, (_, i) => i)
   for (let i = idx.length - 1; i > 0; i--) {
@@ -16,54 +16,23 @@ export function QuestionModal({
   question,
   contextLabel,
   onAnswer,
-  minExplanationSec = 3,
-  readLockMultiplier = 1,
 }: {
   question: Question
   contextLabel: string
   onAnswer: (choice: number, correct: boolean, responseMs: number) => void
-  minExplanationSec?: number
-  readLockMultiplier?: number
 }) {
   const order = useMemo(() => shuffleIndices(question.choices.length), [question.id])
-  const readLockMs =
-    Math.min(4000, Math.max(1500, question.minReadSec * 1000)) * readLockMultiplier
-
-  const [locked, setLocked] = useState(true)
+  const [openedAt] = useState(() => Date.now())
   const [selected, setSelected] = useState<number | null>(null)
   const [explaining, setExplaining] = useState(false)
-  const [explainReady, setExplainReady] = useState(false)
-  const [readyAt, setReadyAt] = useState<number | null>(null)
-  const [responseMs, setResponseMs] = useState(0)
-
-  useEffect(() => {
-    setLocked(true)
-    setSelected(null)
-    setExplaining(false)
-    setExplainReady(false)
-    setReadyAt(null)
-    const t = setTimeout(() => {
-      setLocked(false)
-      setReadyAt(Date.now())
-    }, readLockMs)
-    return () => clearTimeout(t)
-  }, [question.id, readLockMs])
-
-  useEffect(() => {
-    if (!explaining) return
-    setExplainReady(false)
-    const t = setTimeout(() => setExplainReady(true), minExplanationSec * 1000)
-    return () => clearTimeout(t)
-  }, [explaining, minExplanationSec])
 
   const handleChoose = (originalIndex: number) => {
-    if (locked || selected !== null) return
-    const elapsed = readyAt ? Date.now() - readyAt : 0
-    setResponseMs(elapsed)
+    if (selected !== null) return
+    const elapsed = Date.now() - openedAt
     setSelected(originalIndex)
     const correct = originalIndex === question.answer
     if (correct) {
-      setTimeout(() => onAnswer(originalIndex, true, elapsed), 450)
+      setTimeout(() => onAnswer(originalIndex, true, elapsed), 350)
     } else {
       setExplaining(true)
     }
@@ -92,7 +61,7 @@ export function QuestionModal({
                     'question-modal__choice' +
                     (isSelected ? (isCorrect ? ' is-correct' : ' is-wrong') : '')
                   }
-                  disabled={locked || selected !== null}
+                  disabled={selected !== null}
                   onClick={() => handleChoose(originalIndex)}
                 >
                   <span className="question-modal__choice-badge">{pos + 1}</span>
@@ -103,8 +72,6 @@ export function QuestionModal({
           </div>
         )}
 
-        {locked && !explaining && <p className="question-modal__hint">문제를 읽는 중...</p>}
-
         {explaining && (
           <div className="question-modal__explanation">
             <p className="question-modal__explanation-title">해설</p>
@@ -113,10 +80,9 @@ export function QuestionModal({
             </p>
             <button
               className="question-modal__ack"
-              disabled={!explainReady}
-              onClick={() => onAnswer(selected as number, false, responseMs)}
+              onClick={() => onAnswer(selected as number, false, Date.now() - openedAt)}
             >
-              이해했어요
+              다음
             </button>
           </div>
         )}

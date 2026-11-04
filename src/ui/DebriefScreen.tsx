@@ -9,7 +9,6 @@ export function DebriefScreen() {
   const debriefAttempts = useGameStore((s) => s.debriefAttempts)
   const answerDebrief = useGameStore((s) => s.answerDebrief)
   const waveNumber = useGameStore((s) => s.waveNumber)
-  const readLockMultiplier = useGameStore((s) => s.readLockMultiplier)
 
   const current = debriefQuestions[debriefAttempts.length]
   const answeredCount = debriefAttempts.length
@@ -37,8 +36,6 @@ export function DebriefScreen() {
           question={current}
           contextLabel={`전투 복기 ${answeredCount + 1}/3`}
           onAnswer={(choice, _correct, responseMs) => answerDebrief(choice, responseMs)}
-          minExplanationSec={balance.debrief.minExplanationSec}
-          readLockMultiplier={readLockMultiplier}
         />
       )}
     </div>

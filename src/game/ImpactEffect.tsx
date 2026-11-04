@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { AdditiveBlending, Color, Vector3 } from 'three'
 import type { PointLight, Sprite, SpriteMaterial } from 'three'
-import { emberTexture, fireTexture, flashTexture, smokeTexture } from './vfxTextures'
+import { emberTexture, fireTexture, flashTexture, smokeTextures } from './vfxTextures'
 
 const IMPACT_LIFETIME_SEC = 1.2
 // 섬광/화염/파편은 전체 수명의 이 비율 안에서 "펑" 터지고 사그라든다.
@@ -23,6 +23,10 @@ function randomSparkDir() {
 
 function randomSmokeOffset() {
   return new Vector3((Math.random() - 0.5) * 0.9, Math.random() * 0.3, (Math.random() - 0.5) * 0.9)
+}
+
+function randomRotation() {
+  return Math.random() * Math.PI * 2
 }
 
 // 명중 시 "맞았다"는 걸 확실히 보여주는 탄착 이펙트. 평평한 구체/링 지오메트리는 입체감 없는
@@ -47,6 +51,7 @@ export function ImpactEffect({
   const smokeRefs = useRef<(Sprite | null)[]>([])
   const sparkDirs = useMemo(() => Array.from({ length: SPARK_COUNT }, randomSparkDir), [])
   const smokeOffsets = useMemo(() => Array.from({ length: SMOKE_COUNT }, randomSmokeOffset), [])
+  const smokeRotations = useMemo(() => Array.from({ length: SMOKE_COUNT }, randomRotation), [])
   const fireColor = useMemo(() => new Color(color), [color])
 
   useFrame((_, delta) => {
@@ -135,7 +140,13 @@ export function ImpactEffect({
             smokeRefs.current[i] = el
           }}
         >
-          <spriteMaterial map={smokeTexture} transparent opacity={0} depthWrite={false} />
+          <spriteMaterial
+            map={smokeTextures[i % smokeTextures.length]}
+            rotation={smokeRotations[i]}
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
         </sprite>
       ))}
     </group>

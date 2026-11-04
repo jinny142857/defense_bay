@@ -59,7 +59,6 @@ export function CombatHUD() {
   const bossActive = useGameStore((s) => s.bossActive)
   const activeSupplyQuestion = useGameStore((s) => s.activeSupplyQuestion)
   const answerSupplyBox = useGameStore((s) => s.answerSupplyBox)
-  const readLockMultiplier = useGameStore((s) => s.readLockMultiplier)
 
   const durabilityPct = Math.round((durability / balance.combat.breakwaterMaxDurability) * 100)
 
@@ -94,7 +93,6 @@ export function CombatHUD() {
         <QuestionModal
           question={activeSupplyQuestion.question}
           contextLabel={`보급상자 · ${BOX_LABELS[activeSupplyQuestion.boxType]}`}
-          readLockMultiplier={readLockMultiplier}
           onAnswer={(choice, _correct, responseMs) => answerSupplyBox(choice, responseMs)}
         />
       )}

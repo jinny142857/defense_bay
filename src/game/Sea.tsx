@@ -11,9 +11,10 @@ type SeaMesh = Mesh<PlaneGeometryType, ShaderMaterial>
 // 사용자 제공 바다/하늘 셰이더(SeaEnvironment_GameAssets/README_for_ClaudeCode.md 가이드).
 // Gerstner 파도 — getWaveHeight()가 몹 잠김 계산과 동일한 높이를 CPU에서 재현한다 (Mob.tsx 참고).
 export function Sea({ onPointerDown }: { onPointerDown?: (e: ThreeEvent<PointerEvent>) => void }) {
-  // waveAmp 기본값(1.0)은 파도가 너무 크게 출렁여 어지럽고, 방파제 근처(카메라 코앞)에서도
-  // 파고가 벽 높이(y=1.0)를 넘어 물이 방파제를 덮치는 것처럼 보였다 — 확 낮춰서 잔잔하게 만든다.
-  const sea = useMemo(() => createSea({ waveAmp: 0.4 }) as SeaMesh, [])
+  // 큰 파고(Gerstner 변위)가 화면 전체와 몹/보급상자까지 위아래로 흔들어 멀미난다는 피드백 —
+  // 변위는 거의 0으로 죽이고, 빛 반사/썬글린트/잔물결 음영(프래그먼트 셰이더의 ripple() 노이즈,
+  // uWaveAmp와 무관하게 항상 동작)만 남긴다. 그래야 "반짝이는 잔잔한 바다"로 보인다.
+  const sea = useMemo(() => createSea({ waveAmp: 0.04 }) as SeaMesh, [])
   const sky = useMemo(() => createSky(), [])
   // AimRay(Scene.tsx)가 "빗맞음" 조준 지점/거리를 구하려고 매 프레임 레이캐스트할 배경.
   // 실제 바다 메시는 파도 변위를 위해 400x400 분할(삼각형 32만 개)이라 매 프레임 쏘기엔 너무 무겁다

@@ -13,7 +13,6 @@ export function MaintenanceScreen() {
   const answerMaintenanceBonus = useGameStore((s) => s.answerMaintenanceBonus)
   const finishMaintenance = useGameStore((s) => s.finishMaintenance)
   const waveNumber = useGameStore((s) => s.waveNumber)
-  const readLockMultiplier = useGameStore((s) => s.readLockMultiplier)
 
   const [openModal, setOpenModal] = useState<'repair' | 'bonus' | null>(null)
   const bonusRemaining = balance.maintenance.bonusMaxAttempts - bonusUsed
@@ -56,7 +55,6 @@ export function MaintenanceScreen() {
         <QuestionModal
           question={repairQuestion}
           contextLabel="정비 · 방파제 수리"
-          readLockMultiplier={readLockMultiplier}
           onAnswer={(choice, _correct, responseMs) => {
             answerMaintenanceRepair(choice, responseMs)
             setOpenModal(null)
@@ -68,7 +66,6 @@ export function MaintenanceScreen() {
         <QuestionModal
           question={bonusQuestion}
           contextLabel={`정비 · 보너스 문제 (남은 기회 ${bonusRemaining})`}
-          readLockMultiplier={readLockMultiplier}
           onAnswer={(choice, _correct, responseMs) => {
             answerMaintenanceBonus(choice, responseMs)
             setOpenModal(null)

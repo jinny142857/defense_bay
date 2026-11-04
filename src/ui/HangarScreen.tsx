@@ -18,7 +18,6 @@ export function HangarScreen() {
   const answerUpgrade = useGameStore((s) => s.answerUpgrade)
   const startStage = useGameStore((s) => s.startStage)
   const goToLobby = useGameStore((s) => s.goToLobby)
-  const readLockMultiplier = useGameStore((s) => s.readLockMultiplier)
   const ownedVehicles = useGameStore((s) => s.ownedVehicles)
   const equippedVehicleId = useGameStore((s) => s.equippedVehicleId)
   const equipVehicle = useGameStore((s) => s.equipVehicle)
@@ -112,7 +111,6 @@ export function HangarScreen() {
         <QuestionModal
           question={pendingUpgrade.question}
           contextLabel={`격납고 · 강화 확인 (Lv.${pendingUpgrade.nextLevel})`}
-          readLockMultiplier={readLockMultiplier}
           onAnswer={(choice, _correct, responseMs) => answerUpgrade(choice, responseMs)}
         />
       )}

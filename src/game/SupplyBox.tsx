@@ -7,7 +7,6 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import { raycastTargets } from './raycastRegistry'
-import { getWaveHeight } from './SeaWater.js'
 import type { SupplyBoxType } from '../types'
 
 const MODEL_URL = '/assets/supply-drop.glb'
@@ -81,7 +80,7 @@ export function SupplyBox({
   const floatingRef = useRef(false)
   const floatAgeRef = useRef(0)
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     if (doneRef.current || !groupRef.current) return
     if (phase === 'BOSS_INTRO') return
     const speedMul = slow ? 0.15 : 1
@@ -95,9 +94,9 @@ export function SupplyBox({
       return
     }
 
-    // 수면 도달 후: 사라지지 않고 파도를 따라 둥둥 떠 있다가, 한참 안 주우면 그제서야 사라진다.
+    // 수면 도달 후: 사라지지 않고 가만히 떠 있다가(위아래로 흔들리던 걸 없앴다 — 어지럽다는
+    // 피드백), 한참 안 주우면 그제서야 사라진다.
     floatAgeRef.current += delta * speedMul
-    groupRef.current.position.y = getWaveHeight(startX, startZ, clock.getElapsedTime()) + restY
     if (floatAgeRef.current >= FLOAT_LIFETIME_SEC) {
       doneRef.current = true
       onLost()

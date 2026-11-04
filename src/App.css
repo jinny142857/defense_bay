@@ -52,15 +52,46 @@
   justify-content: center;
 }
 
-.loading-screen__tag {
+.loading-screen__panel {
   background: #15181b;
   border: 1px solid var(--panel-line);
-  padding: 10px 28px;
+  padding: 10px 28px 14px;
   clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-screen__tag {
   color: var(--glow-amber);
   font-weight: 700;
   letter-spacing: 2px;
   text-shadow: 0 0 10px var(--glow-amber);
+}
+
+.loading-screen__bar {
+  width: 160px;
+  height: 4px;
+  background: rgba(255, 176, 103, 0.15);
+  overflow: hidden;
+}
+
+.loading-screen__bar-fill {
+  width: 40%;
+  height: 100%;
+  background: var(--glow-amber);
+  box-shadow: 0 0 8px var(--glow-amber);
+  animation: loading-sweep 0.9s ease-in-out infinite;
+}
+
+@keyframes loading-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
 }
 
 /* --- 화면 전환 셔터 --- */

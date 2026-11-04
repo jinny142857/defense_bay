@@ -6,7 +6,6 @@ import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { balance } from '../config/balance'
 import { useGameStore } from '../state/gameStore'
-import { getWaveHeight } from './SeaWater.js'
 import { MobHealthBar } from './MobHealthBar'
 import { raycastTargets } from './raycastRegistry'
 import type { MobKind } from '../types'
@@ -110,14 +109,9 @@ export function Mob({
       }
     }
 
-    // 파도 위에 떠서 일부 잠김 + 경사에 따라 살짝 기울기
-    const { x, z } = group.position
-    group.position.y = getWaveHeight(x, z, t) - sink
-    const e = 1.5
-    const dx = getWaveHeight(x + e, z, t) - getWaveHeight(x - e, z, t)
-    const dz = getWaveHeight(x, z + e, t) - getWaveHeight(x, z - e, t)
-    group.rotation.z = -dx * 0.25
-    group.rotation.x = dz * 0.25
+    // 수면 높이 그대로 따라가며 위아래로 흔들리는 게 어지럽다는 피드백 — 잠기는 깊이만큼
+    // 고정된 높이에 떠 있게 하고(출렁임 없음), 기울기도 더 이상 흔들지 않는다.
+    group.position.y = -sink
   })
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -148,6 +142,12 @@ export function Mob({
     >
       <primitive object={model} />
       <MobHealthBar hpRatio={hp / maxHp} yOffset={HEALTH_BAR_Y[kind]} />
+      {/* 모델이 다리/집게 사이 빈틈이 많아 클릭이 그 틈으로 빠져나가 "안 맞는다"는 피드백 —
+          보이지 않는 넉넉한 구 히트박스를 몸통 중심에 겹쳐 판정을 관대하게 한다. */}
+      <mesh position={[0, HEALTH_BAR_Y[kind] * 0.45, 0]}>
+        <sphereGeometry args={[1.6, 8, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
     </group>
   )
 }
