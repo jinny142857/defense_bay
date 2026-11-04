@@ -362,8 +362,11 @@ function SceneContents() {
           groundY={BOX_GROUND_Y}
           onCatch={() => {
             if (!tryFire()) return false
+            // 문제를 실제로 띄울 수 있을 때만 상자를 치운다 — 실패하면(드물게 이미 다른 문제가
+            // 떠 있는 경우 등) 상자가 그대로 남아 다시 시도할 수 있다("맞혔는데 문제가 안 뜨고
+            // 상자만 사라지는" 버그 방지).
+            if (!openSupplyBox(b.boxType)) return false
             setBoxes((list) => list.filter((x) => x.id !== b.id))
-            openSupplyBox(b.boxType)
             return true
           }}
           onLost={() => {

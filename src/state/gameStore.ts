@@ -104,7 +104,7 @@ interface GameState {
   telegraphBossAttack: () => void
   resolveBossAttack: () => void
 
-  openSupplyBox: (boxType: SupplyBoxType) => void
+  openSupplyBox: (boxType: SupplyBoxType) => boolean
   answerSupplyBox: (choice: number, responseMs: number) => void
 
   answerDebrief: (choice: number, responseMs: number) => void
@@ -459,14 +459,18 @@ export const useGameStore = create<GameState>()(
         checkDefeat(set, get)
       },
     
+      // 질문을 못 띄우면(이미 다른 문제가 떠 있거나, 낼 문제가 없음) false를 돌려준다 — 호출부
+      // (Scene.tsx)가 이 값을 보고서야 상자를 치운다. 예전엔 무조건 상자부터 치웠는데, 그러면
+      // "맞혔는데 문제가 안 뜨고 상자만 사라지는" 버그로 보였다.
       openSupplyBox: (boxType) => {
         const s = get()
-        if (s.activeSupplyQuestion) return
+        if (s.activeSupplyQuestion) return false
         const used = s.usedQuestionIds
         const [q] = pickQuestions(1, used)
-        if (!q) return
+        if (!q) return false
         used.add(q.id)
         set({ activeSupplyQuestion: { boxType, question: q }, usedQuestionIds: used })
+        return true
       },
     
       answerSupplyBox: (choice, responseMs) => {
