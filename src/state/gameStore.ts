@@ -145,11 +145,15 @@ function recordAttempt(
 
 // 장착 무기 기본 공격력에 강화 레벨/버프를 반영한 유효 공격력. damageBoss와 Mob.tsx의 몹 피격
 // 데미지 계산이 같은 공식을 쓰도록 여기 한 곳에 모은다.
+// attackBuffPct는 웨이브를 넘길 때 리셋되지 않고 출격 점검 결과가 계속 누적되는 값이라(한 스테이지
+// 안에서 오답이 겹치면 계속 깎인다), 하한선 없이 곱하면 이론상 공격력이 0 또는 음수까지 떨어질 수
+// 있다 — "맞혀도 안 죽는다" 버그로 보일 수 있어 최소 배율을 둔다.
 function getEffectiveAttack(get: GetFn): number {
   const s = get()
   const weapon = WEAPON_DEFS[s.equippedWeaponId]
   const level = s.weaponLevels[s.equippedWeaponId] ?? 1
-  return weapon.baseAttack * (1 + balance.hangar.attackPctPerLevel * (level - 1)) * (1 + s.attackBuffPct)
+  const buffMultiplier = Math.max(0.4, 1 + s.attackBuffPct)
+  return weapon.baseAttack * (1 + balance.hangar.attackPctPerLevel * (level - 1)) * buffMultiplier
 }
 
 function tryEnterDebrief(set: SetFn, get: GetFn) {

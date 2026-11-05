@@ -143,9 +143,14 @@ export function Mob({
       <primitive object={model} />
       <MobHealthBar hpRatio={hp / maxHp} yOffset={HEALTH_BAR_Y[kind]} />
       {/* 모델이 다리/집게 사이 빈틈이 많아 클릭이 그 틈으로 빠져나가 "안 맞는다"는 피드백 —
-          보이지 않는 넉넉한 구 히트박스를 몸통 중심에 겹쳐 판정을 관대하게 한다. */}
-      <mesh position={[0, HEALTH_BAR_Y[kind] * 0.45, 0]}>
-        <sphereGeometry args={[1.6, 8, 8]} />
+          보이지 않는 넉넉한 구 히트박스 2개를 위아래로 겹쳐서(몸통 위/아래) 캡슐처럼 전신을
+          덮어 판정을 관대하게 한다(공 하나로는 모델 머리/다리 쪽이 비어 있을 수 있었다). */}
+      <mesh position={[0, HEALTH_BAR_Y[kind] * 0.2, 0]}>
+        <sphereGeometry args={[1.9, 8, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, HEALTH_BAR_Y[kind] * 0.75, 0]}>
+        <sphereGeometry args={[1.5, 8, 8]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>

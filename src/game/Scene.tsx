@@ -246,8 +246,10 @@ function SceneContents() {
       return true
     }
     const weapon = WEAPON_DEFS[equippedWeaponId]
-    const fireRate = weapon.baseFireRate * (1 + fireRateBuffPct)
-    const intervalMs = 1000 / Math.max(0.1, fireRate)
+    // fireRateBuffPct도 attackBuffPct와 같은 이유(웨이브 넘길 때 리셋 안 되고 누적)로 하한을 둔다 —
+    // 안 그러면 쿨다운이 몇 초까지 늘어나 "쏴도 반응이 없다"처럼 보일 수 있다.
+    const fireRate = weapon.baseFireRate * Math.max(0.5, 1 + fireRateBuffPct)
+    const intervalMs = 1000 / fireRate
     if (now - lastShotAtRef.current < intervalMs) return false
     lastShotAtRef.current = now
     return true
