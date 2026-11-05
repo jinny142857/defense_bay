@@ -28,9 +28,12 @@ import type { MobKind, SupplyBoxType } from '../types'
 // 40~65m는 등장하자마자 바로 코앞이라 다가오는 느낌이 없었다. 안개(near=120) 경계 너머에서 작게
 // 희미하게 나타나 점점 또렷해지며 다가오도록 그 사이로 더 뒤로 보낸다(스폰 간격도 같이 늘려서
 // 한꺼번에 몰려오지 않게 한다 — balance.combat.crabSpawnIntervalSec 참고).
+// Z 스폰 범위를 너무 넓게 뒀더니(180~260) 무작위 거리 차 때문에 연속 스폰된 몹들이 화면에
+// 등장하는 타이밍이 뒤섞여 "한꺼번에 여럿 등장"으로 보였다 — 범위를 좁혀서 스폰 간격(3초)이
+// 등장 순서를 그대로 지배하게 한다.
 const MOB_SPAWN_X_SPREAD = 100
-const MOB_SPAWN_Z_MIN = 180
-const MOB_SPAWN_Z_MAX = 260
+const MOB_SPAWN_Z_MIN = 205
+const MOB_SPAWN_Z_MAX = 225
 const BOX_Z = -16
 // SupplyBox가 모델의 실제 바닥(튜브)을 기준으로 이 높이에 맞춰 띄우므로, 이제는 수면 자체의
 // 높이(0 부근)만 쓰면 된다 — 살짝 음수로 둬서 튜브가 물에 약간 잠긴 듯 보이게 한다.
@@ -41,6 +44,9 @@ const MOB_IMPACT_COLOR = '#ff5a36'
 const BOSS_IMPACT_COLOR = '#4ad9c9'
 const MOB_HIT_POPUP_COLOR = '#f3e9d2'
 const BOX_IMPACT_COLOR = '#ffd36b'
+// 발사 쿨다운에 막혀 클릭이 조용히 씹히면 "맞혔는데 아무 일도 안 생긴다"로 보인다 — 쿨다운 때문에
+// 거부된 클릭도 눈에 띄는 표시를 띄워서 "조준은 맞았는데 아직 재장전 중"이라는 걸 알려준다.
+const RELOAD_POPUP_COLOR = '#9a9a92'
 const BOMBARD_IMPACT_COLOR = '#ff8a3d'
 const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
 const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
@@ -327,7 +333,10 @@ function SceneContents() {
       {waveNumber === 3 && bossTriggered && (
         <Boss
           onHit={(targetWeak, point) => {
-            if (!tryFire()) return
+            if (!tryFire()) {
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              return
+            }
             addTracer(point)
             addImpact(point, BOSS_IMPACT_COLOR)
             const result = damageBoss(targetWeak)
@@ -348,7 +357,10 @@ function SceneContents() {
           startX={m.startX}
           startZ={m.startZ}
           onHit={(point) => {
-            if (!tryFire()) return false
+            if (!tryFire()) {
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              return false
+            }
             addTracer(point)
             return true
           }}
@@ -380,7 +392,10 @@ function SceneContents() {
           startZ={BOX_Z}
           groundY={BOX_GROUND_Y}
           onCatch={(point) => {
-            if (!tryFire()) return false
+            if (!tryFire()) {
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              return false
+            }
             addTracer(point)
             // 문제를 실제로 띄울 수 있을 때만 상자를 치운다 — 실패하면(드물게 이미 다른 문제가
             // 떠 있는 경우 등) 상자가 그대로 남아 다시 시도할 수 있다("맞혔는데 문제가 안 뜨고

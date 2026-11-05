@@ -156,14 +156,16 @@ export function Boss({
 
   const activeName = WEAK_NAMES[weakIndex]
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+  // onClick 대신 onPointerDown — Mob.tsx와 같은 이유(R3F onClick의 드래그 거리 판정 때문에
+  // 간헐적으로 클릭이 씹히는 문제).
+  const handleClick = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
     onHit(e.object.name === activeName, [e.point.x, e.point.y, e.point.z])
   }
 
   return (
     <group ref={groupRef} position={[0, 0, COMBAT_Z]} scale={MODEL_SCALE} userData={{ hittable: true }}>
-      <primitive object={model} onClick={handleClick} />
+      <primitive object={model} onPointerDown={handleClick} />
     </group>
   )
 }

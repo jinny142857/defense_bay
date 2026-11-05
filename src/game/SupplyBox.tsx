@@ -103,7 +103,9 @@ export function SupplyBox({
     }
   })
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+  // onClick 대신 onPointerDown — Mob.tsx와 같은 이유(R3F onClick의 드래그 거리 판정 때문에
+  // 간헐적으로 클릭이 씹히는 문제. 특히 낙하 중인 상자처럼 빠르게 움직이는 대상에서 두드러진다).
+  const handleClick = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
     if (doneRef.current) return
     const point: [number, number, number] = [e.point.x, e.point.y, e.point.z]
@@ -115,7 +117,7 @@ export function SupplyBox({
       ref={groupRef}
       position={[startX, START_Y, startZ]}
       scale={MODEL_SCALE}
-      onClick={handleClick}
+      onPointerDown={handleClick}
       userData={{ hittable: true }}
     >
       <primitive object={model} />
