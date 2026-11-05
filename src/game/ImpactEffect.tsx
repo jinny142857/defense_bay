@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { AdditiveBlending, Color, Vector3 } from 'three'
 import type { PointLight, Sprite, SpriteMaterial } from 'three'
 import { emberTexture, fireTexture, flashTexture, smokeTextures } from './vfxTextures'
@@ -14,6 +14,11 @@ const FLASH_FRACTION = 0.1
 const FIRE_HOLD_FRACTION = 0.55
 const SPARK_COUNT = 8
 const SMOKE_COUNT = 5
+// 몹은 카메라에서 최대 260m까지 떨어져서 스폰되는데, 이펙트 크기가 월드 단위로 고정돼 있으면
+// 원근 때문에 거리가 멀수록 점점 작아지다가 사실상 안 보이게 된다("몹 거리와 상관없이 보이게
+// 해달라"는 피드백). 카메라와의 거리에 비례해 크기를 키워서, 가까운 곳(REFERENCE_DISTANCE
+// 이내)은 원래 크기 그대로 두고 먼 곳은 화면상 비슷한 크기로 보이게 보정한다.
+const REFERENCE_DISTANCE = 15
 
 function randomSparkDir() {
   const theta = Math.random() * Math.PI * 2
@@ -43,6 +48,12 @@ export function ImpactEffect({
   color?: string
   onDone: () => void
 }) {
+  const { camera } = useThree()
+  const distanceBoost = useMemo(
+    () => Math.max(1, new Vector3(...position).distanceTo(camera.position) / REFERENCE_DISTANCE),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
   const [age, setAge] = useState(0)
   const flashRef = useRef<Sprite>(null)
   const fireRef = useRef<Sprite>(null)
@@ -66,23 +77,23 @@ export function ImpactEffect({
       const flashT = Math.min(1, next / (IMPACT_LIFETIME_SEC * FLASH_FRACTION))
       const mat = flashRef.current.material as SpriteMaterial
       mat.opacity = Math.max(0, 1 - flashT)
-      flashRef.current.scale.setScalar(1.0 + flashT * 3.6)
+      flashRef.current.scale.setScalar((1.0 + flashT * 3.6) * distanceBoost)
     }
     if (fireRef.current) {
       const mat = fireRef.current.material as SpriteMaterial
       const fireOpacity =
         burstT < FIRE_HOLD_FRACTION ? 1 : 1 - (burstT - FIRE_HOLD_FRACTION) / (1 - FIRE_HOLD_FRACTION)
       mat.opacity = Math.max(0, fireOpacity)
-      fireRef.current.scale.setScalar(1.4 + Math.min(burstT, FIRE_HOLD_FRACTION) * 4.2)
+      fireRef.current.scale.setScalar((1.4 + Math.min(burstT, FIRE_HOLD_FRACTION) * 4.2) * distanceBoost)
     }
     sparkRefs.current.forEach((spark, i) => {
       if (!spark) return
       const dir = sparkDirs[i]
-      const dist = burstT * 2.6 * (0.7 + (i % 3) * 0.15)
+      const dist = burstT * 2.6 * (0.7 + (i % 3) * 0.15) * Math.min(distanceBoost, 4)
       spark.position.set(dir.x * dist, dir.y * dist, dir.z * dist)
       const mat = spark.material as SpriteMaterial
       mat.opacity = burstFade
-      spark.scale.setScalar(0.1 + burstFade * 0.35)
+      spark.scale.setScalar((0.1 + burstFade * 0.35) * distanceBoost)
     })
     // 연기: 포탄이 터진 자리에 뭉게뭉게 부풀어 오르는 포연 덩어리 — 밝은 회백색이라 어두운 바다/
     // 몹/보스를 배경으로도 또렷이 보이고, 전체 수명 내내 남아있다가 끝에서야 옅어진다.
@@ -91,10 +102,11 @@ export function ImpactEffect({
       const off = smokeOffsets[i]
       // 화염이 먼저 눈에 띄도록 살짝 늦게 피어오르기 시작한다(바로 뒤덮으면 불꽃이 묻혀 버린다).
       const bloom = Math.min(1, Math.max(0, (t - 0.12) / 0.35))
-      smoke.position.set(off.x * (0.5 + t * 0.8), 0.2 + t * 1.6 + off.y, off.z * (0.5 + t * 0.8))
+      const spread = Math.min(distanceBoost, 4)
+      smoke.position.set(off.x * (0.5 + t * 0.8) * spread, (0.2 + t * 1.6 + off.y) * spread, off.z * (0.5 + t * 0.8) * spread)
       const mat = smoke.material as SpriteMaterial
       mat.opacity = Math.max(0, fade * 0.75 * bloom)
-      smoke.scale.setScalar(0.35 + bloom * 1.0 + t * 0.35)
+      smoke.scale.setScalar((0.35 + bloom * 1.0 + t * 0.35) * distanceBoost)
     })
     if (lightRef.current) lightRef.current.intensity = 35 * burstFade * burstFade
     if (next >= IMPACT_LIFETIME_SEC) onDone()
@@ -102,7 +114,7 @@ export function ImpactEffect({
 
   return (
     <group position={position}>
-      <pointLight ref={lightRef} color={color} intensity={35} distance={10} />
+      <pointLight ref={lightRef} color={color} intensity={35} distance={10 * distanceBoost} />
       <sprite ref={flashRef}>
         <spriteMaterial map={flashTexture} transparent opacity={1} blending={AdditiveBlending} depthWrite={false} />
       </sprite>

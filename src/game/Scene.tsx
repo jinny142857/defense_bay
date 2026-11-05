@@ -41,6 +41,7 @@ const MOB_IMPACT_COLOR = '#ff5a36'
 const BOSS_IMPACT_COLOR = '#4ad9c9'
 const MOB_HIT_POPUP_COLOR = '#f3e9d2'
 const BOX_IMPACT_COLOR = '#ffd36b'
+const BOMBARD_IMPACT_COLOR = '#ff8a3d'
 const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
 const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
@@ -234,6 +235,15 @@ function SceneContents() {
     if (bombardPulse === 0) return
     const count = mobs.length
     if (count === 0) return
+    // 공중 포격 연출: 몹들이 흩어져 있던 전장 위로 폭발이 차례로 터지는 "융단폭격" 느낌을 준다.
+    // 몹의 현재 좌표는 추적하지 않으므로(각자 내부에서 움직임), 스폰 가능 영역 안에서 무작위로
+    // 흩뿌려 대략적인 전장 범위를 훑는 걸로 대신한다.
+    const strikeCount = Math.min(10, Math.max(4, count))
+    for (let i = 0; i < strikeCount; i++) {
+      const sx = (Math.random() - 0.5) * MOB_SPAWN_X_SPREAD
+      const sz = -(10 + Math.random() * 90)
+      setTimeout(() => addImpact([sx, 0, sz], BOMBARD_IMPACT_COLOR), i * 90)
+    }
     setMobs([])
     for (let i = 0; i < count; i++) defeatCrab()
     // eslint-disable-next-line react-hooks/exhaustive-deps

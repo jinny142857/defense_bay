@@ -67,6 +67,10 @@ interface GameState {
   activeSupplyQuestion: ActiveSupplyQuestion | null
   supplyBombardPulse: number
   infiniteReloadUntil: number
+  // 보급상자를 맞혀서 문제를 풀면 실제로 뭘 얻었는지("공중 포격 지원!", "부품 +8" 등) 화면에
+  // 보여주기 위한 신호 — pulse를 올려서 같은 문구가 연속으로 떠도 애니메이션이 다시 트리거되게 한다.
+  supplyResultText: string | null
+  supplyResultPulse: number
 
   bossActive: boolean
   bossTriggered: boolean
@@ -231,6 +235,8 @@ export const useGameStore = create<GameState>()(
     
       activeSupplyQuestion: null,
       supplyBombardPulse: 0,
+      supplyResultText: null,
+      supplyResultPulse: 0,
       infiniteReloadUntil: 0,
     
       bossActive: false,
@@ -272,6 +278,8 @@ export const useGameStore = create<GameState>()(
           debriefAttempts: [],
           activeSupplyQuestion: null,
           supplyBombardPulse: 0,
+          supplyResultText: null,
+          supplyResultPulse: 0,
           infiniteReloadUntil: 0,
           bossActive: false,
           bossTriggered: false,
@@ -302,6 +310,8 @@ export const useGameStore = create<GameState>()(
           debriefAttempts: [],
           activeSupplyQuestion: null,
           supplyBombardPulse: 0,
+          supplyResultText: null,
+          supplyResultPulse: 0,
           infiniteReloadUntil: 0,
           bossActive: false,
           bossTriggered: false,
@@ -490,20 +500,26 @@ export const useGameStore = create<GameState>()(
           responseMs,
         })
     
+        // 맞혀서 실제로 뭘 얻었는지 화면에 띄울 문구 — 보상 종류별로 분기해서 채운다.
+        let resultText: string | null = null
         if (correct) {
           const b = balance.supplyBox
           if (active.boxType === 'parts') {
             set((st) => ({ parts: st.parts + b.partsReward, stagePartsEarned: st.stagePartsEarned + b.partsReward }))
+            resultText = `부품 +${b.partsReward}`
           } else if (active.boxType === 'repair') {
             if (Math.random() < 0.5) {
               set((st) => ({
                 durability: Math.min(balance.combat.breakwaterMaxDurability, st.durability + b.repairDurability),
               }))
+              resultText = `방파제 내구도 +${b.repairDurability}`
             } else {
               set({ infiniteReloadUntil: Date.now() + b.infiniteReloadSec * 1000 })
+              resultText = `무한 장전 (${b.infiniteReloadSec}초)`
             }
           } else if (active.boxType === 'bombard') {
             set((st) => ({ supplyBombardPulse: st.supplyBombardPulse + 1 }))
+            resultText = '공중 포격 지원!'
             const st2 = get()
             if (st2.bossActive && !st2.bossDefeated) {
               const dmg = balance.boss.maxHp * b.bombardBossDamagePct
@@ -519,8 +535,12 @@ export const useGameStore = create<GameState>()(
             }
           }
         }
-    
-        set({ activeSupplyQuestion: null })
+
+        set((st) => ({
+          activeSupplyQuestion: null,
+          supplyResultText: resultText,
+          supplyResultPulse: resultText ? st.supplyResultPulse + 1 : st.supplyResultPulse,
+        }))
       },
     
       answerDebrief: (choice, responseMs) => {

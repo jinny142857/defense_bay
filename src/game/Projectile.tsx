@@ -12,6 +12,9 @@ import { beamTexture } from './vfxTextures'
 
 const TRACER_LIFETIME_SEC = 0.12
 const BEAM_WIDTH = 0.16
+// 몹이 최대 260m 밖에서 스폰되는데, 궤적 폭이 월드 단위로 고정이면 먼 쪽(명중 지점)은 원근 때문에
+// 1px도 안 되게 가늘어져서 사실상 안 보인다 — 각 끝점의 카메라 거리에 맞춰 폭을 따로 키운다.
+const REFERENCE_DISTANCE = 15
 
 // 포탄 궤적(예광탄): 예전엔 LineBasicMaterial 1px 선이라 화면에서 거의 안 보였다. 발사 지점과
 // 명중 지점을 잇는, 카메라를 향해 서 있는 길쭉한 빛줄기 평면을 직접 지오메트리로 만들어서
@@ -37,12 +40,17 @@ export function Projectile({
     const viewDir = new Vector3().subVectors(camera.position, mid).normalize()
     const side = new Vector3().crossVectors(dir, viewDir)
     if (side.lengthSq() < 1e-6) side.set(0, 1, 0).cross(dir)
-    side.normalize().multiplyScalar(BEAM_WIDTH / 2)
+    side.normalize()
 
-    const p0 = fromVec.clone().add(side)
-    const p1 = fromVec.clone().sub(side)
-    const p2 = toVec.clone().add(side)
-    const p3 = toVec.clone().sub(side)
+    const distFrom = camera.position.distanceTo(fromVec)
+    const distTo = camera.position.distanceTo(toVec)
+    const widthFrom = (BEAM_WIDTH * Math.max(1, distFrom / REFERENCE_DISTANCE)) / 2
+    const widthTo = (BEAM_WIDTH * Math.max(1, distTo / REFERENCE_DISTANCE)) / 2
+
+    const p0 = fromVec.clone().addScaledVector(side, widthFrom)
+    const p1 = fromVec.clone().addScaledVector(side, -widthFrom)
+    const p2 = toVec.clone().addScaledVector(side, widthTo)
+    const p3 = toVec.clone().addScaledVector(side, -widthTo)
 
     const geometry = new BufferGeometry()
     const positions = new Float32Array([

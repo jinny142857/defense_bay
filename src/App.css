@@ -319,6 +319,26 @@
   background: var(--ok-green);
 }
 
+.hud__supply-result {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translate(-50%, -8px) scale(0.92);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--glow-amber);
+  text-shadow: 0 0 18px var(--glow-amber), 0 2px 4px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+}
+
+.hud__supply-result--visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
 .hud__crosshair {
   position: absolute;
   width: 54px;
