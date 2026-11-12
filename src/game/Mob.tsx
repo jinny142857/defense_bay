@@ -99,7 +99,9 @@ export function Mob({
     const group = groupRef.current
     if (doneRef.current || !group) return
     if (phase === 'BOSS_INTRO') return
-    const speedMul = slow ? 0.15 : 1
+    // 보급상자 문제를 푸는 동안은 몹이 아예 다가오지 않아야 한다는 피드백 — 예전엔 15%
+    // 속도로 느리게나마 계속 전진해서 "문제 푸는 동안에도 조금씩 다가온다"는 불안감을 줬다.
+    const speedMul = slow ? 0 : 1
     const t = clock.getElapsedTime()
 
     if (!atWallRef.current) {
