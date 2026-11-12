@@ -20,9 +20,14 @@ const HEALTH_BAR_Y: Record<MobKind, number> = {
   crab: 2.0,
   frogTurtle: 2.5,
 }
-// 방파제 몸체(Breakwater.tsx)의 바다 쪽 면이 z=-7 부근이라, 거기서 멈춰야 벽을 넘어 들어오지
-// 않는다(예전 -5는 벽 안쪽, 탱크(z=-6)보다도 더 앞까지 들어와 버리는 값이었다).
-const WALL_TRIGGER_Z = -7.3
+// 방파제 몸체(Breakwater.tsx)의 바다 쪽 면이 z=-7 부근(어두운 캡은 z=-6.85)인데, 몹 모델은
+// 정지 지점(피벗)을 기준으로 앞뒤로도 몸통이 뻗어 있어서 피벗만 z=-7.3에 세워도 앞다리/머리가
+// 그 너머로 넘어가 방파제 위로 "기어오르는" 것처럼 보였다("방파제 넘어오지 않게" 피드백) —
+// 모델 몸통 크기만큼 더 여유를 두고 훨씬 바깥(바다 쪽)에서 멈춘다.
+const WALL_TRIGGER_Z = -9.5
+// 방파제에 들러붙어 있는 동안은 몸을 더 깊이 가라앉혀서, 벽 위로 솟아 보이지 않고 "방파제
+// 아래(수면)에서 할퀴는" 모습으로 보이게 한다.
+const WALL_SINK_BONUS = 0.5
 // 방파제에 닿은 뒤 죽이지 못하면 이 시간만큼 들러붙어 "공격"하다가 사라진다(내구도 피해는
 // 닿는 순간 이미 한 번 적용됨 — 계속 눌러앉아 있는 게 아니라 정리용 타임아웃).
 const WALL_LINGER_SEC = 6
@@ -68,6 +73,9 @@ export function Mob({
   const [hp, setHp] = useState<number>(maxHp)
   const phase = useGameStore((s) => s.phase)
   const slow = useGameStore((s) => s.activeSupplyQuestion !== null)
+  // 같은 타이밍에 스폰된 몹들도 저마다 속도가 달라야 한 덩어리로 뭉쳐 다가오지 않는다
+  // ("몹들이 너무 동시에 다가온다" 피드백) — 개체마다 고정된 배율을 한 번만 뽑아 둔다.
+  const speedJitter = useMemo(() => 0.75 + Math.random() * 0.55, [])
 
   useEffect(() => {
     model.traverse((obj) => {
@@ -102,7 +110,7 @@ export function Mob({
         Math.max(SPEED_FACTOR_MIN, dist / SPEED_REFERENCE_DIST),
       )
       toTarget.set(-group.position.x, 0, -group.position.z).normalize()
-      group.position.addScaledVector(toTarget, speed * speedMul * distanceFactor * delta)
+      group.position.addScaledVector(toTarget, speed * speedMul * distanceFactor * speedJitter * delta)
       group.rotation.y = Math.atan2(toTarget.x, toTarget.z)
 
       if (group.position.z > WALL_TRIGGER_Z) {
@@ -123,7 +131,7 @@ export function Mob({
 
     // 수면 높이 그대로 따라가며 위아래로 흔들리는 게 어지럽다는 피드백 — 잠기는 깊이만큼
     // 고정된 높이에 떠 있게 하고(출렁임 없음), 기울기도 더 이상 흔들지 않는다.
-    group.position.y = -sink
+    group.position.y = -sink - (atWallRef.current ? WALL_SINK_BONUS : 0)
   })
 
   // onClick이 아니라 onPointerDown을 쓴다 — R3F의 onClick은 pointerdown/up 사이 이동 거리가

@@ -80,6 +80,11 @@ interface GameState {
   bossExposed: boolean
   bossAttackTelegraphed: boolean
   bossExposureBonusSec: number
+  // 전조(telegraph) 뒤 실제로 포탄이 날아가는 중인지 — HUD 경고 문구와, 포탄을 쏴서 막을 수
+  // 있는 타이밍인지를 구분하는 데 쓴다. pulse는 Scene.tsx에 "포탄 하나 새로 띄워라" 신호를
+  // 주기 위해 매번 값을 올린다(같은 값이 연달아 와도 useEffect가 다시 트리거되게).
+  bossShellFlying: boolean
+  bossShellPulse: number
 
   ownedWeapons: string[]
   equippedWeaponId: string
@@ -106,6 +111,8 @@ interface GameState {
   setBossExposed: (exposed: boolean) => void
   consumeBossExposureBonus: () => number
   telegraphBossAttack: () => void
+  launchBossShell: () => void
+  interceptBossShell: () => void
   resolveBossAttack: () => void
 
   openSupplyBox: (boxType: SupplyBoxType) => boolean
@@ -246,6 +253,8 @@ export const useGameStore = create<GameState>()(
       bossWeakPointIndex: 0,
       bossExposed: true,
       bossAttackTelegraphed: false,
+      bossShellFlying: false,
+      bossShellPulse: 0,
       bossExposureBonusSec: 0,
     
       ownedWeapons: [STARTING_WEAPON_ID],
@@ -288,6 +297,8 @@ export const useGameStore = create<GameState>()(
           bossWeakPointIndex: 0,
           bossExposed: true,
           bossAttackTelegraphed: false,
+          bossShellFlying: false,
+          bossShellPulse: 0,
           bossExposureBonusSec: 0,
         })
         get().beginPreCheck()
@@ -320,6 +331,8 @@ export const useGameStore = create<GameState>()(
           bossWeakPointIndex: 0,
           bossExposed: true,
           bossAttackTelegraphed: false,
+          bossShellFlying: false,
+          bossShellPulse: 0,
           bossExposureBonusSec: 0,
         })
         get().beginPreCheck()
@@ -399,6 +412,8 @@ export const useGameStore = create<GameState>()(
                 bossWeakPointIndex: 0 as WeakIndex,
                 bossExposed: true,
                 bossAttackTelegraphed: false,
+                bossShellFlying: false,
+                bossShellPulse: 0,
                 bossExposureBonusSec: 0,
               }
             : {}),
@@ -462,12 +477,27 @@ export const useGameStore = create<GameState>()(
         if (!s.bossActive || s.bossDefeated) return
         set({ bossAttackTelegraphed: true })
       },
-    
+
+      // 전조 경고가 끝나면 바로 내구도를 깎는 대신, 실제로 포탄이 날아가는 연출을 Scene.tsx에
+      // 맡긴다 — 포탄이 날아가는 동안 플레이어가 맞혀서 격추하면 interceptBossShell(), 못 막고
+      // 방파제에 닿으면 resolveBossAttack()이 호출된다.
+      launchBossShell: () => {
+        const s = get()
+        if (!s.bossActive || s.bossDefeated) return
+        set({ bossAttackTelegraphed: false, bossShellFlying: true, bossShellPulse: s.bossShellPulse + 1 })
+      },
+
+      interceptBossShell: () => {
+        const s = get()
+        if (!s.bossShellFlying) return
+        set({ bossShellFlying: false, score: s.score + balance.boss.shellInterceptScore })
+      },
+
       resolveBossAttack: () => {
         const s = get()
-        if (!s.bossAttackTelegraphed) return
+        if (!s.bossShellFlying) return
         set({
-          bossAttackTelegraphed: false,
+          bossShellFlying: false,
           durability: Math.max(0, s.durability - balance.boss.attackDamage),
         })
         checkDefeat(set, get)

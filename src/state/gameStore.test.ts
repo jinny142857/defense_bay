@@ -140,7 +140,7 @@ describe('패배 (방파제 내구도 0)', () => {
   })
 
   it('보스 공격으로 내구도가 0이 돼도 DEFEAT로 전환된다', () => {
-    useGameStore.setState({ waveNumber: 3, durability: balance.boss.attackDamage, bossAttackTelegraphed: true })
+    useGameStore.setState({ waveNumber: 3, durability: balance.boss.attackDamage, bossShellFlying: true })
     useGameStore.getState().resolveBossAttack()
     expect(useGameStore.getState().durability).toBe(0)
     expect(useGameStore.getState().phase).toBe('DEFEAT')

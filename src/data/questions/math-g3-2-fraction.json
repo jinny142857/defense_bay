@@ -958,5 +958,285 @@
     "answer": 0,
     "explanation": "40을 10묶음으로 나누면 한 묶음은 40÷10=4이고, 3묶음은 4×3=12입니다.",
     "minReadSec": 2
+  },
+  {
+    "id": "m3-2-frac-mixed-001",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "가분수 7/3을 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 1/3",
+      "1 2/3",
+      "3 1/3",
+      "2 2/3"
+    ],
+    "answer": 0,
+    "explanation": "7을 3으로 나누면 몫이 2, 나머지가 1입니다. 그래서 7/3 = 2 1/3입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-002",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "가분수 9/4를 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 1/4",
+      "1 1/4",
+      "2 3/4",
+      "3 1/4"
+    ],
+    "answer": 0,
+    "explanation": "9를 4로 나누면 몫이 2, 나머지가 1입니다. 그래서 9/4 = 2 1/4입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-003",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "가분수 11/5를 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 1/5",
+      "1 1/5",
+      "2 2/5",
+      "3 1/5"
+    ],
+    "answer": 0,
+    "explanation": "11을 5로 나누면 몫이 2, 나머지가 1입니다. 그래서 11/5 = 2 1/5입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-004",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "가분수 13/6을 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 1/6",
+      "1 1/6",
+      "2 2/6",
+      "3 1/6"
+    ],
+    "answer": 0,
+    "explanation": "13을 6으로 나누면 몫이 2, 나머지가 1입니다. 그래서 13/6 = 2 1/6입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-005",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 2,
+    "type": "multiple_choice",
+    "stem": "가분수 17/7을 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 3/7",
+      "2 4/7",
+      "3 3/7",
+      "1 3/7"
+    ],
+    "answer": 0,
+    "explanation": "17을 7로 나누면 몫이 2, 나머지가 3입니다. 그래서 17/7 = 2 3/7입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-006",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 2,
+    "type": "multiple_choice",
+    "stem": "가분수 19/8을 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 3/8",
+      "2 5/8",
+      "1 3/8",
+      "3 3/8"
+    ],
+    "answer": 0,
+    "explanation": "19를 8로 나누면 몫이 2, 나머지가 3입니다. 그래서 19/8 = 2 3/8입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-007",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 2,
+    "type": "multiple_choice",
+    "stem": "가분수 23/9를 대분수로 나타내면 얼마입니까?",
+    "choices": [
+      "2 5/9",
+      "2 4/9",
+      "3 5/9",
+      "1 5/9"
+    ],
+    "answer": 0,
+    "explanation": "23을 9로 나누면 몫이 2, 나머지가 5입니다. 그래서 23/9 = 2 5/9입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-008",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "대분수 1 2/3을 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "5/3",
+      "3/3",
+      "6/3",
+      "4/3"
+    ],
+    "answer": 0,
+    "explanation": "1 2/3은 1을 3/3으로 바꾸고 2/3을 더한 것과 같습니다. 3/3 + 2/3 = 5/3이므로 1 2/3 = 5/3입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-009",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "대분수 2 1/4를 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "9/4",
+      "7/4",
+      "8/4",
+      "3/4"
+    ],
+    "answer": 0,
+    "explanation": "2 1/4는 2×4+1=9이므로 2 1/4 = 9/4입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-010",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "대분수 1 3/5를 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "8/5",
+      "4/5",
+      "9/5",
+      "7/5"
+    ],
+    "answer": 0,
+    "explanation": "1 3/5는 1×5+3=8이므로 1 3/5 = 8/5입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-011",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 1,
+    "type": "multiple_choice",
+    "stem": "대분수 3 1/2를 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "7/2",
+      "4/2",
+      "5/2",
+      "6/2"
+    ],
+    "answer": 0,
+    "explanation": "3 1/2는 3×2+1=7이므로 3 1/2 = 7/2입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-012",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 2,
+    "type": "multiple_choice",
+    "stem": "대분수 2 2/3을 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "8/3",
+      "6/3",
+      "7/3",
+      "5/3"
+    ],
+    "answer": 0,
+    "explanation": "2 2/3은 2×3+2=8이므로 2 2/3 = 8/3입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-013",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 2,
+    "type": "multiple_choice",
+    "stem": "대분수 1 4/7을 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "11/7",
+      "5/7",
+      "10/7",
+      "8/7"
+    ],
+    "answer": 0,
+    "explanation": "1 4/7은 1×7+4=11이므로 1 4/7 = 11/7입니다.",
+    "minReadSec": 2.2
+  },
+  {
+    "id": "m3-2-frac-mixed-014",
+    "grade": 3,
+    "semester": 2,
+    "subject": "수학",
+    "unit": "분수",
+    "concept": "가분수와 대분수의 변환",
+    "difficulty": 2,
+    "type": "multiple_choice",
+    "stem": "대분수 2 3/8을 가분수로 나타내면 얼마입니까?",
+    "choices": [
+      "19/8",
+      "13/8",
+      "18/8",
+      "11/8"
+    ],
+    "answer": 0,
+    "explanation": "2 3/8은 2×8+3=19이므로 2 3/8 = 19/8입니다.",
+    "minReadSec": 2.2
   }
 ]

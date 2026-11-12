@@ -11,6 +11,7 @@ import { Turret } from './Turret'
 import { Mob } from './Mob'
 import { SupplyBox } from './SupplyBox'
 import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
+import { BossShell } from './BossShell'
 import { Projectile } from './Projectile'
 import { MuzzleFlash } from './MuzzleFlash'
 import { ImpactEffect } from './ImpactEffect'
@@ -33,9 +34,12 @@ import type { MobKind, SupplyBoxType } from '../types'
 // Z 스폰 범위를 너무 넓게 뒀더니(180~260) 무작위 거리 차 때문에 연속 스폰된 몹들이 화면에
 // 등장하는 타이밍이 뒤섞여 "한꺼번에 여럿 등장"으로 보였다 — 범위를 좁혀서 스폰 간격(3초)이
 // 등장 순서를 그대로 지배하게 한다.
-const MOB_SPAWN_X_SPREAD = 100
-const MOB_SPAWN_Z_MIN = 205
-const MOB_SPAWN_Z_MAX = 225
+// 개체별 속도/스폰 간격에 편차를 둔 뒤로는(Mob.tsx speedJitter, nextSpawnInterval) 굳이 Z 범위를
+// 좁게 묶어두지 않아도 "한꺼번에 몰려온다"는 느낌이 안 생긴다 — 위치도 다양하게 보이도록 다시
+// 넓힌다.
+const MOB_SPAWN_X_SPREAD = 120
+const MOB_SPAWN_Z_MIN = 190
+const MOB_SPAWN_Z_MAX = 240
 const BOX_Z = -16
 // SupplyBox가 모델의 실제 바닥(튜브)을 기준으로 이 높이에 맞춰 띄우므로, 이제는 수면 자체의
 // 높이(0 부근)만 쓰면 된다 — 살짝 음수로 둬서 튜브가 물에 약간 잠긴 듯 보이게 한다.
@@ -52,6 +56,15 @@ const RELOAD_POPUP_COLOR = '#9a9a92'
 const BOMBARD_IMPACT_COLOR = '#ff8a3d'
 const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
 const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
+const BOSS_SHELL_IMPACT_COLOR = '#ff6a2b'
+// 보스 포탄이 출발하는 높이(보스 몸통 위쪽 즈음)와, 방파제 쪽 착탄 지점이 흩어질 가로 폭/높이.
+const BOSS_SHELL_FROM_Y = 9
+// 착탄 지점이 카메라 시야 밖으로 나가면 쏴서 막을 수가 없다 — 카메라(z=-3.3)에서 착탄
+// 깊이(z=-6.5)까지는 3.2m뿐이라 화면에 들어오는 가로 폭이 생각보다 좁다(시야각 계산상 약
+// ±2.4m). 넉넉히 안쪽으로 좁혀서 항상 화면 안에 떨어지게 한다.
+const BOSS_SHELL_TARGET_X_SPREAD = 4
+const BOSS_SHELL_TARGET_Y = 1.3
+const BOSS_SHELL_TARGET_Z = -6.5
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
 const CAMERA_HOME = new Vector3(0, 2.6, -3.3)
 const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
@@ -92,6 +105,12 @@ interface WaterBurst {
   position: [number, number, number]
 }
 
+interface ShellEntity {
+  id: string
+  from: [number, number, number]
+  to: [number, number, number]
+}
+
 interface Popup {
   id: string
   position: [number, number, number]
@@ -99,10 +118,18 @@ interface Popup {
   color: string
 }
 
+// 스폰 간격에 ±40% 정도 무작위 편차를 줘서 똑같은 박자로 한 줄씩 나오지 않게 한다
+// ("몹들이 너무 동시에 다가온다" 피드백 — 고정 간격이면 속도가 비슷한 몹들이 계속 같은
+// 간격으로 붙어서 결국 한 덩어리처럼 보인다).
+function nextSpawnInterval() {
+  return balance.combat.crabSpawnIntervalSec * (0.6 + Math.random() * 0.8)
+}
+
 function Spawner({ onSpawn }: { onSpawn: (progress: number) => void }) {
   // 웨이브 시작과 동시에 첫 몹이 바로 등장하도록 타이머를 스폰 간격만큼 미리 채워 둔다
   // ("시작하면 바로 나와야" 피드백 — 첫 스폰까지 기다리는 공백을 없앤다).
   const timer = useRef<number>(balance.combat.crabSpawnIntervalSec)
+  const nextInterval = useRef<number>(balance.combat.crabSpawnIntervalSec)
   const spawnedCount = useRef(0)
   const crabsTotal = useGameStore((s) => s.crabsTotal)
   const phase = useGameStore((s) => s.phase)
@@ -110,8 +137,9 @@ function Spawner({ onSpawn }: { onSpawn: (progress: number) => void }) {
   useFrame((_, delta) => {
     if (phase !== 'COMBAT' || spawnedCount.current >= crabsTotal) return
     timer.current += delta
-    if (timer.current >= balance.combat.crabSpawnIntervalSec) {
+    if (timer.current >= nextInterval.current) {
       timer.current = 0
+      nextInterval.current = nextSpawnInterval()
       // 웨이브 안에서 몇 번째 스폰인지(0~1) — 초반엔 게부터, 뒤로 갈수록 두꺼비가 섞이게 한다.
       onSpawn(spawnedCount.current / crabsTotal)
       spawnedCount.current += 1
@@ -233,6 +261,7 @@ function SceneContents() {
   const [impacts, setImpacts] = useState<Impact[]>([])
   const [waterBursts, setWaterBursts] = useState<WaterBurst[]>([])
   const [popups, setPopups] = useState<Popup[]>([])
+  const [shells, setShells] = useState<ShellEntity[]>([])
   const defeatCrab = useGameStore((s) => s.defeatCrab)
   const crabReachedBreakwater = useGameStore((s) => s.crabReachedBreakwater)
   const openSupplyBox = useGameStore((s) => s.openSupplyBox)
@@ -240,6 +269,9 @@ function SceneContents() {
   const waveNumber = useGameStore((s) => s.waveNumber)
   const bossTriggered = useGameStore((s) => s.bossTriggered)
   const bombardPulse = useGameStore((s) => s.supplyBombardPulse)
+  const bossShellPulse = useGameStore((s) => s.bossShellPulse)
+  const interceptBossShell = useGameStore((s) => s.interceptBossShell)
+  const resolveBossAttack = useGameStore((s) => s.resolveBossAttack)
   const fireRateBuffPct = useGameStore((s) => s.fireRateBuffPct)
   const equippedWeaponId = useGameStore((s) => s.equippedWeaponId)
   const infiniteReloadUntil = useGameStore((s) => s.infiniteReloadUntil)
@@ -264,6 +296,21 @@ function SceneContents() {
     for (let i = 0; i < count; i++) defeatCrab()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bombardPulse])
+
+  // 보스의 "파도 공격" 전조가 끝나면(Boss.tsx launchBossShell) 실제로 포탄 하나를 띄운다 —
+  // 보스 쪽에서 출발해 방파제 쪽 무작위 지점으로 떨어지는 포물선을 그린다.
+  useEffect(() => {
+    if (bossShellPulse === 0) return
+    const id = `shell-${nextId.current++}`
+    const from: [number, number, number] = [0, BOSS_SHELL_FROM_Y, BOSS_COMBAT_Z]
+    const to: [number, number, number] = [
+      (Math.random() - 0.5) * BOSS_SHELL_TARGET_X_SPREAD,
+      BOSS_SHELL_TARGET_Y,
+      BOSS_SHELL_TARGET_Z,
+    ]
+    setShells((list) => [...list, { id, from, to }])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bossShellPulse])
 
   const tryFire = (): boolean => {
     const now = Date.now()
@@ -369,6 +416,29 @@ function SceneContents() {
           }}
         />
       )}
+      {shells.map((sh) => (
+        <BossShell
+          key={sh.id}
+          from={sh.from}
+          to={sh.to}
+          onHit={(point) => {
+            if (!tryFire()) {
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              return false
+            }
+            addTracer(point)
+            addImpact(point, BOSS_SHELL_IMPACT_COLOR)
+            interceptBossShell()
+            setShells((list) => list.filter((x) => x.id !== sh.id))
+            return true
+          }}
+          onLand={(point) => {
+            addImpact(point, BOSS_SHELL_IMPACT_COLOR)
+            resolveBossAttack()
+            setShells((list) => list.filter((x) => x.id !== sh.id))
+          }}
+        />
+      ))}
       {mobs.map((m) => (
         <Mob
           key={m.id}

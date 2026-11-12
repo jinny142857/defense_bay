@@ -40,9 +40,10 @@ export const balance = {
   // (0.55/0.7까지 줄였더니 "뭐가 안 보인다"는 피드백 — 너무 작았다).
   // speed: 7.5/5도 여전히 느리다는 피드백 — 더 올린다(방파제 정지 지점이 이제 제대로 멀리
   // 떨어져 있어서, 예전에 "너무 빠르다"였던 9/6 근처로 돌아가도 코앞까지 덮치는 느낌은 없다).
+  // scale: "조금만 줄여달라"는 피드백으로 한 단계만 낮춘다(기존 0.85/1).
   mobs: {
-    crab: { speed: 9, sink: 0.12, scale: 0.85, hp: 100 },
-    frogTurtle: { speed: 6, sink: 0.3, scale: 1, hp: 220 },
+    crab: { speed: 9, sink: 0.12, scale: 0.7, hp: 100 },
+    frogTurtle: { speed: 6, sink: 0.3, scale: 0.82, hp: 220 },
   },
 
   // PRD 4.3 스테이지 1, 웨이브별 일반 몹 수 (3웨이브는 보스 포함)
@@ -74,6 +75,10 @@ export const balance = {
     attackDamage: 10,
     weakHitScore: 20,
     defeatScore: 1000,
+    // 전조 경고가 끝나면 실제 포탄이 날아간다(Scene.tsx BossShell) — 이 시간 안에 포탄을 맞혀
+    // 격추하면 피해를 막는다.
+    shellFlightSec: 3.2,
+    shellInterceptScore: 30,
     // 전조 발동 조건: 일반 몹이 이 비율 이하로 줄면 BOSS_INTRO 트리거
     triggerMobRatio: 0.5,
     introDurationSec: 6,

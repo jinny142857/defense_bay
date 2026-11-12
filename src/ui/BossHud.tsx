@@ -8,6 +8,7 @@ export function BossHud() {
   const bossExposed = useGameStore((s) => s.bossExposed)
   const bossWeakPointIndex = useGameStore((s) => s.bossWeakPointIndex)
   const bossAttackTelegraphed = useGameStore((s) => s.bossAttackTelegraphed)
+  const bossShellFlying = useGameStore((s) => s.bossShellFlying)
 
   const hpPct = Math.max(0, Math.round((bossHp / balance.boss.maxHp) * 100))
 
@@ -23,6 +24,7 @@ export function BossHud() {
           : '약점 방어 중'}
       </div>
       {bossAttackTelegraphed && <div className="boss-hud__warning">⚠ 파도 공격 경고!</div>}
+      {bossShellFlying && <div className="boss-hud__warning">🔥 포탄이 날아옵니다! 쏴서 막으세요!</div>}
     </div>
   )
 }

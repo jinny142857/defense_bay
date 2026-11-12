@@ -29,7 +29,7 @@ function useBossCombatTimers() {
   const setBossExposed = useGameStore((s) => s.setBossExposed)
   const consumeBossExposureBonus = useGameStore((s) => s.consumeBossExposureBonus)
   const telegraphBossAttack = useGameStore((s) => s.telegraphBossAttack)
-  const resolveBossAttack = useGameStore((s) => s.resolveBossAttack)
+  const launchBossShell = useGameStore((s) => s.launchBossShell)
 
   const exposedRef = useRef(true)
   const phaseTimerRef = useRef<number>(balance.boss.exposedSec)
@@ -58,7 +58,8 @@ function useBossCombatTimers() {
       setBossExposed(exposedRef.current)
     }
 
-    // PRD 5.3 예고 후 파도 공격, 약점을 맞히면 취소(damageBoss에서 처리)
+    // PRD 5.3 예고(전조) 후 실제 포탄 발사 — 약점을 맞히면 전조는 취소되지만(damageBoss에서
+    // 처리), 일단 포탄이 날아가기 시작하면 격추 여부는 Scene.tsx의 BossShell이 판정한다.
     attackTimerRef.current -= delta
     if (!telegraphingRef.current && attackTimerRef.current <= 0) {
       telegraphingRef.current = true
@@ -66,7 +67,7 @@ function useBossCombatTimers() {
       attackTimerRef.current = balance.boss.attackTelegraphSec
     } else if (telegraphingRef.current && attackTimerRef.current <= 0) {
       telegraphingRef.current = false
-      resolveBossAttack()
+      launchBossShell()
       attackTimerRef.current = balance.boss.attackIntervalSec
     }
   })
