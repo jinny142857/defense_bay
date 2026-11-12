@@ -9,7 +9,11 @@ import { raycastTargets } from './raycastRegistry'
 // 보스가 방파제로 쏘는 포탄(PRD 5.3 "파도 공격"을 실제 눈에 보이는 발사체로 구현) — 전조 경고
 // 뒤 보스 쪽에서 날아올라 포물선을 그리며 방파제로 떨어진다. 탱크로 맞히면 격추해서 피해를
 // 막을 수 있고(onHit), 못 맞히고 도착하면 onLand가 호출돼 방파제가 피해를 입는다.
-const ARC_HEIGHT = 9
+// ARC_HEIGHT가 너무 크면(예전 9) 포물선 한가운데 즈음에서 카메라 시야각 위로 벗어나 안 보이게
+// 된다 — 특히 카메라에 가까워질수록(명중 지점이 바로 코앞) 화면에 들어오는 세로 폭 자체가
+// 좁아지는데, 포물선 정점의 세계 좌표 높이는 그대로라 그 좁아진 창 밖으로 솟아버린다. 고정
+// 카메라(CAMERA_HOME)·발사/착탄 좌표 기준으로 끝까지 화면 안에 머물도록 낮게 눌렀다.
+const ARC_HEIGHT = 2.5
 const CORE_RADIUS = 0.55
 const LOOKAHEAD_SEC = 0.05
 const REFERENCE_DISTANCE = 15
