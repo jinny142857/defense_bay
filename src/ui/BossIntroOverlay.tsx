@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
+import { sound } from '../game/sound'
 
 // PRD 5.1 보스 등장 연출의 타이틀 단계. 카메라가 바다 한가운데 고정된 거신 둘레를
 // 한 바퀴 도는 동안(Scene.tsx의 CameraRig) 이름·약점만 보여주고, 아무 키/클릭이나
@@ -10,6 +11,7 @@ export function BossIntroOverlay() {
   const [canAdvance, setCanAdvance] = useState(false)
 
   useEffect(() => {
+    sound.playBossRoar()
     const advanceGateTimer = setTimeout(() => setCanAdvance(true), 800)
     const endTimer = setTimeout(() => finishBossIntro(), balance.boss.introDurationSec * 1000)
     return () => {

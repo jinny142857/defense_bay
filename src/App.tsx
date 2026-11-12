@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from './state/gameStore'
+import { sound } from './game/sound'
+import { preloadFlipbookSheets } from './game/flipbookVfx'
 import { Scene } from './game/Scene'
 import { LoadingScreen } from './ui/LoadingScreen'
 import { LobbyScreen } from './ui/LobbyScreen'
@@ -51,6 +53,22 @@ export default function App() {
     return () => clearTimeout(t)
   }, [])
 
+  const showScene = phase === 'COMBAT' || phase === 'BOSS_INTRO'
+
+  // 효과음은 앱이 뜨자마자 미리 받아둔다(처음 쏠 때 지연 없게). 빗소리는 전투 장면이 떠 있는
+  // 동안만 배경에 깔아준다.
+  // 훅은 이른 반환(아래 booting) 앞에서 항상 같은 순서로 호출돼야 하므로 여기 둔다.
+  useEffect(() => {
+    sound.preloadAll()
+    preloadFlipbookSheets()
+  }, [])
+
+  useEffect(() => {
+    if (!showScene) return
+    sound.startLoop('rain', 'rainLoop', 0.3)
+    return () => sound.stopLoop('rain')
+  }, [showScene])
+
   const booting = !hydrated || !minTimeElapsed
 
   if (booting) {
@@ -61,7 +79,6 @@ export default function App() {
     )
   }
 
-  const showScene = phase === 'COMBAT' || phase === 'BOSS_INTRO'
   // 전투 중 보스 등장 오버레이가 뜨고 사라지는 건 같은 장면이므로 셔터를 띄우지 않는다.
   const transitionGroup = showScene ? 'playfield' : phase
 

@@ -14,8 +14,10 @@ import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
 import { Projectile } from './Projectile'
 import { MuzzleFlash } from './MuzzleFlash'
 import { ImpactEffect } from './ImpactEffect'
+import { WaterBurstEffect } from './WaterBurstEffect'
 import { DamagePopup } from './DamagePopup'
 import { triggerFireSignal } from './fireSignal'
+import { sound } from './sound'
 import { aimSignal } from './aimSignal'
 import { raycastTargets } from './raycastRegistry'
 import { balance } from '../config/balance'
@@ -82,6 +84,12 @@ interface Impact {
   id: string
   position: [number, number, number]
   color: string
+  scale?: number
+}
+
+interface WaterBurst {
+  id: string
+  position: [number, number, number]
 }
 
 interface Popup {
@@ -223,6 +231,7 @@ function SceneContents() {
   const [tracers, setTracers] = useState<Tracer[]>([])
   const [flashes, setFlashes] = useState<{ id: string }[]>([])
   const [impacts, setImpacts] = useState<Impact[]>([])
+  const [waterBursts, setWaterBursts] = useState<WaterBurst[]>([])
   const [popups, setPopups] = useState<Popup[]>([])
   const defeatCrab = useGameStore((s) => s.defeatCrab)
   const crabReachedBreakwater = useGameStore((s) => s.crabReachedBreakwater)
@@ -241,6 +250,7 @@ function SceneContents() {
     if (bombardPulse === 0) return
     const count = mobs.length
     if (count === 0) return
+    sound.playAirstrike()
     // 공중 포격 연출: 몹들이 흩어져 있던 전장 위로 폭발이 차례로 터지는 "융단폭격" 느낌을 준다.
     // 몹의 현재 좌표는 추적하지 않으므로(각자 내부에서 움직임), 스폰 가능 영역 안에서 무작위로
     // 흩뿌려 대략적인 전장 범위를 훑는 걸로 대신한다.
@@ -248,7 +258,7 @@ function SceneContents() {
     for (let i = 0; i < strikeCount; i++) {
       const sx = (Math.random() - 0.5) * MOB_SPAWN_X_SPREAD
       const sz = -(10 + Math.random() * 90)
-      setTimeout(() => addImpact([sx, 0, sz], BOMBARD_IMPACT_COLOR), i * 90)
+      setTimeout(() => addWaterBurst([sx, 0, sz]), i * 90)
     }
     setMobs([])
     for (let i = 0; i < count; i++) defeatCrab()
@@ -293,14 +303,23 @@ function SceneContents() {
     setTracers((list) => [...list, { id, from: MUZZLE, to }])
     setFlashes((list) => [...list, { id: `flash-${nextId.current++}` }])
     triggerFireSignal()
+    sound.playCannonFire()
   }
 
-  const addImpact = (position: [number, number, number], color: string) => {
+  const addImpact = (position: [number, number, number], color: string, scale = 1) => {
     const id = `impact-${nextId.current++}`
     // 명중 지점은 피격 대상 표면 위라서, 그 자리에 그대로 띄우면 섬광/파편이 모델 지오메트리에
     // 가려 거의 안 보인다(addPopup과 동일 문제). 카메라 쪽으로 살짝 띄워서 확실히 보이게 한다.
     const offsetPosition: [number, number, number] = [position[0], position[1], position[2] + 1.0]
-    setImpacts((list) => [...list, { id, position: offsetPosition, color }])
+    setImpacts((list) => [...list, { id, position: offsetPosition, color, scale }])
+    sound.playExplosion()
+  }
+
+  // 공중 포격 착탄: 수면 물기둥 + 그 밑동에 작은 화염(VFX_SPEC.md 권장 0.55배)을 같이 띄운다.
+  const addWaterBurst = (position: [number, number, number]) => {
+    const id = `waterburst-${nextId.current++}`
+    setWaterBursts((list) => [...list, { id, position }])
+    addImpact(position, BOMBARD_IMPACT_COLOR, 0.55)
   }
 
   const addPopup = (position: [number, number, number], text: string, color: string) => {
@@ -430,7 +449,15 @@ function SceneContents() {
           key={im.id}
           position={im.position}
           color={im.color}
+          scale={im.scale}
           onDone={() => setImpacts((list) => list.filter((x) => x.id !== im.id))}
+        />
+      ))}
+      {waterBursts.map((wb) => (
+        <WaterBurstEffect
+          key={wb.id}
+          position={wb.position}
+          onDone={() => setWaterBursts((list) => list.filter((x) => x.id !== wb.id))}
         />
       ))}
       {popups.map((p) => (

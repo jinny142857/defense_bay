@@ -5,3 +5,7 @@ dist-ssr
 .vite
 *.tsbuildinfo
 .DS_Store
+
+# 블렌더/사운드 원본 작업물 — 실제 사용 파일은 public/assets, public/sounds로 정리해 넣음
+/sounds/
+/impact_vfx_sheets.zip
