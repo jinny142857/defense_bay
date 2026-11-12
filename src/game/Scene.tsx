@@ -152,11 +152,16 @@ function Spawner({ onSpawn }: { onSpawn: (progress: number) => void }) {
 function SupplyBoxSpawner({
   onSpawn,
   hasActiveBox,
+  bossActive,
 }: {
   onSpawn: (type: SupplyBoxType) => void
   // 보급상자는 한 번에 하나만 떠 있어야 하므로, 앞선 상자가 잡히거나 사라지기 전까지는 다음
   // 상자를 띄우지 않는다(타이머는 그동안 멈춰 있다가 자리가 비면 이어서 센다).
   hasActiveBox: boolean
+  // 보스가 다가와 교전이 시작되면(웨이브 3) 이 웨이브의 할당량(targetCount)을 이미 다 써버린
+  // 경우가 많다 — 긴 보스전 내내 보급상자가 한 번도 안 뜨는 문제가 있었다. 보스전 중에는
+  // 할당량 제한 없이 같은 타이머로 계속 뜨게 한다.
+  bossActive: boolean
 }) {
   const phase = useGameStore((s) => s.phase)
   const targetCount = useRef(
@@ -167,7 +172,8 @@ function SupplyBoxSpawner({
   const timer = useRef(Math.random() * 4 + 3)
 
   useFrame((_, delta) => {
-    if (phase !== 'COMBAT' || spawnedCount.current >= targetCount.current || hasActiveBox) return
+    if (phase !== 'COMBAT' || hasActiveBox) return
+    if (!bossActive && spawnedCount.current >= targetCount.current) return
     timer.current -= delta
     if (timer.current <= 0) {
       spawnedCount.current += 1
@@ -267,7 +273,7 @@ function SceneContents() {
   const openSupplyBox = useGameStore((s) => s.openSupplyBox)
   const damageBoss = useGameStore((s) => s.damageBoss)
   const waveNumber = useGameStore((s) => s.waveNumber)
-  const bossTriggered = useGameStore((s) => s.bossTriggered)
+  const bossActive = useGameStore((s) => s.bossActive)
   const bombardPulse = useGameStore((s) => s.supplyBombardPulse)
   const bossShellPulse = useGameStore((s) => s.bossShellPulse)
   const interceptBossShell = useGameStore((s) => s.interceptBossShell)
@@ -391,12 +397,12 @@ function SceneContents() {
       <hemisphereLight args={[0xbac4c8, 0x1f3a40, 1.2]} />
       <directionalLight position={SUN_POSITION} intensity={1.6} color={0xffe2c0} castShadow />
       <Spawner onSpawn={spawnMob} />
-      <SupplyBoxSpawner onSpawn={spawnBox} hasActiveBox={boxes.length > 0} />
+      <SupplyBoxSpawner onSpawn={spawnBox} hasActiveBox={boxes.length > 0} bossActive={bossActive} />
       <Sea onPointerDown={handleMiss} />
       <Mountains />
       <Breakwater />
       <Turret />
-      {waveNumber === 3 && bossTriggered && (
+      {waveNumber === 3 && (
         <Boss
           onHit={(targetWeak, point) => {
             if (!tryFire()) {

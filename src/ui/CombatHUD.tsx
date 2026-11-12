@@ -98,6 +98,9 @@ export function CombatHUD() {
       {bossActive && <BossHud />}
       <div className="hud__top-left">
         <div className="hud__counter">WAVE {waveNumber} · 남은 괴수: {crabsRemaining} / {crabsTotal}</div>
+        {waveNumber === 3 && !bossActive && (
+          <div className="boss-hud__warning">⚠ 거대한 그림자가 수평선에서 다가오고 있습니다...</div>
+        )}
         <div className="hud__counter">부품 ⚙ {parts}</div>
         <div className="hud__buffs">
           {attackBuffPct !== 0 && (

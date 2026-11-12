@@ -80,8 +80,10 @@ export const balance = {
     // 격추하면 피해를 막는다.
     shellFlightSec: 3.2,
     shellInterceptScore: 30,
-    // 전조 발동 조건: 일반 몹이 이 비율 이하로 줄면 BOSS_INTRO 트리거
-    triggerMobRatio: 0.5,
+    // 보스가 수평선(스폰 지점)에서 교전 거리(Boss.tsx COMBAT_Z)까지 다가오는 속도 — 일반
+    // 몹(7~5)보다 훨씬 느리게, 웅장하고 위협적으로 느껴지도록 천천히 다가온다.
+    approachSpeed: 1.6,
+    approachSpawnZ: -150,
     introDurationSec: 6,
   },
 

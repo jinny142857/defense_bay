@@ -105,6 +105,10 @@ interface GameState {
   defeatCrab: () => void
   crabReachedBreakwater: () => void
 
+  // 보스가 수평선에서 천천히 다가와(Boss.tsx) 교전 거리에 실제로 도착했을 때 호출 — 그제서야
+  // 등장 연출(BOSS_INTRO)이 시작된다(예전엔 일반 몹 절반을 처리하면 트리거했는데, 그러면
+  // 보스가 다가오는 모습 없이 갑자기 교전 거리에 나타난 것처럼 보였다).
+  bossArrived: () => void
   finishBossIntro: () => void
   damageBoss: (targetWeak: boolean) => { damage: number; critical: boolean } | null
   getEffectiveAttack: () => number
@@ -188,14 +192,6 @@ function resolveCrab(set: SetFn, get: GetFn) {
   const s = get()
   const remaining = Math.max(0, s.crabsRemaining - 1)
   set({ crabsRemaining: remaining })
-
-  if (s.waveNumber === 3 && !s.bossTriggered) {
-    const threshold = Math.ceil(s.crabsTotal * balance.boss.triggerMobRatio)
-    if (remaining <= threshold) {
-      set({ phase: 'BOSS_INTRO', bossTriggered: true })
-      return
-    }
-  }
   tryEnterDebrief(set, get)
 }
 
@@ -432,6 +428,12 @@ export const useGameStore = create<GameState>()(
         resolveCrab(set, get)
       },
     
+      bossArrived: () => {
+        const s = get()
+        if (s.waveNumber !== 3 || s.bossTriggered || s.bossDefeated) return
+        set({ phase: 'BOSS_INTRO', bossTriggered: true })
+      },
+
       finishBossIntro: () => {
         set({ phase: 'COMBAT', bossActive: true })
       },

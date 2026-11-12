@@ -83,21 +83,27 @@ export function Boss({
   const model = useMemo(() => scene.clone(true), [scene])
   const weakMeshes = useRef<Partial<Record<(typeof WEAK_NAMES)[number], Mesh>>>({})
   const groupRef = useRef<Group>(null)
+  const arrivedRef = useRef(false)
   const weakIndex = useGameStore((s) => s.bossWeakPointIndex)
   const bossExposed = useGameStore((s) => s.bossExposed)
   const bossDefeated = useGameStore((s) => s.bossDefeated)
+  const bossActive = useGameStore((s) => s.bossActive)
+  const bossArrived = useGameStore((s) => s.bossArrived)
   const phase = useGameStore((s) => s.phase)
 
   useBossCombatTimers()
 
+  // 교전이 시작되기 전(다가오는 중)에는 그냥 커다란 배경 장애물일 뿐, 맞혀도 아무 반응이
+  // 없어야 한다 — 조준 십자선이 "맞음"으로 반응하면 혼란스럽다. 실제 교전(bossActive)이
+  // 시작된 뒤에야 조준 대상으로 등록한다.
   useEffect(() => {
     const g = groupRef.current
-    if (!g) return
+    if (!g || !bossActive) return
     raycastTargets.add(g)
     return () => {
       raycastTargets.delete(g)
     }
-  }, [])
+  }, [bossActive])
 
   useEffect(() => {
     weakMeshes.current = {}
@@ -141,16 +147,29 @@ export function Boss({
   }, [weakIndex, bossExposed])
 
   useFrame(({ clock }, delta) => {
-    if (!groupRef.current) return
+    const group = groupRef.current
+    if (!group) return
 
-    // 바다 한가운데 고정된 자리에 서 있는다 — 등장 연출에서는 카메라가 주위를 돈다(CameraRig).
-    groupRef.current.position.z = COMBAT_Z
+    if (!arrivedRef.current) {
+      // 수평선 쪽 스폰 지점에서 교전 거리까지 아주 천천히 다가온다 — 일반 몹처럼 "저 멀리서
+      // 서서히 다가오는" 느낌을 거신에게도 준다(기존엔 처음부터 교전 거리에 고정돼 있어서
+      // 다가오는 연출이 전혀 없었다는 피드백).
+      group.position.z = Math.min(COMBAT_Z, group.position.z + balance.boss.approachSpeed * delta)
+      if (group.position.z >= COMBAT_Z) {
+        arrivedRef.current = true
+        bossArrived()
+      }
+    } else {
+      // 교전 거리에 도착한 뒤로는 그 자리에 고정 — 등장 연출에서는 카메라가 주위를 돈다(CameraRig).
+      group.position.z = COMBAT_Z
+    }
+
     if (phase === 'COMBAT') {
-      groupRef.current.rotation.y += delta * 0.05
+      group.rotation.y += delta * 0.05
     }
 
     // 바다 위에 거의 잠기지 않고 크게 서 있도록, 파도 높이만 따라간다.
-    groupRef.current.position.y = getWaveHeight(0, groupRef.current.position.z, clock.getElapsedTime()) - SINK
+    group.position.y = getWaveHeight(0, group.position.z, clock.getElapsedTime()) - SINK
   })
 
   if (bossDefeated) return null
@@ -161,11 +180,17 @@ export function Boss({
   // 간헐적으로 클릭이 씹히는 문제).
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
+    if (!bossActive) return
     onHit(e.object.name === activeName, [e.point.x, e.point.y, e.point.z])
   }
 
   return (
-    <group ref={groupRef} position={[0, 0, COMBAT_Z]} scale={MODEL_SCALE} userData={{ hittable: true }}>
+    <group
+      ref={groupRef}
+      position={[0, 0, balance.boss.approachSpawnZ]}
+      scale={MODEL_SCALE}
+      userData={{ hittable: true }}
+    >
       <primitive object={model} onPointerDown={handleClick} />
     </group>
   )
