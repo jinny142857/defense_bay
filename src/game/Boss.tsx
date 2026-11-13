@@ -8,16 +8,13 @@ import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
 import { getWaveHeight } from './SeaWater.js'
 import { raycastTargets } from './raycastRegistry'
+import type { BossAsset } from '../data/stages'
 
-const MODEL_URL = '/assets/boss-volcano-titan.glb'
-const MODEL_SCALE = 0.5
-const SINK = 0.15 // 거신은 레퍼런스대로 거의 잠기지 않고 물 위로 크게 선다
 export const COMBAT_Z = -22
 
-// Boss_VolcanoTitan.glb(SeaMobs_GameAssets) 오브젝트 이름 기준 PRD 5.4 약점 진행(머리→가슴→등)에
-// 대응하는 메시를 지정한다. 페이즈마다 이 중 하나만 "열려" 있다 — 나머지 둘은 닫힌 상태로
-// 어둡게 유지하고 클릭해도 약점 판정을 주지 않는다.
-const WEAK_NAMES = ['Head', 'Core_Torso', 'Back_Upper'] as const
+// PRD 5.4 약점 진행(머리→가슴→등)에 대응하는 메시 3개 — 실제 이름은 보스 모델마다 다르므로
+// asset.weakNames(data/stages.ts)로 받는다. 페이즈마다 이 중 하나만 "열려" 있다 — 나머지
+// 둘은 닫힌 상태로 어둡게 유지하고 클릭해도 약점 판정을 주지 않는다.
 const EXPOSED_COLOR = new Color('#4ad9c9')
 const DEFENDED_COLOR = new Color('#4a5a58')
 const CLOSED_COLOR = new Color('#1c2422')
@@ -73,15 +70,17 @@ function useBossCombatTimers() {
   })
 }
 
-// 산호 거신 실제 모델(PRD 7.4, 5.4, Blender MCP로 제작한 coral-titan.glb).
+// 보스 실제 모델(PRD 7.4, 5.4) — 어떤 모델을 쓸지는 스테이지별 bossAsset(data/stages.ts)이 정한다.
 export function Boss({
+  asset,
   onHit,
 }: {
+  asset: BossAsset
   onHit: (targetWeak: boolean, point: [number, number, number]) => void
 }) {
-  const { scene } = useGLTF(MODEL_URL)
+  const { scene } = useGLTF(asset.modelUrl)
   const model = useMemo(() => scene.clone(true), [scene])
-  const weakMeshes = useRef<Partial<Record<(typeof WEAK_NAMES)[number], Mesh>>>({})
+  const weakMeshes = useRef<Partial<Record<string, Mesh>>>({})
   const groupRef = useRef<Group>(null)
   const arrivedRef = useRef(false)
   const weakIndex = useGameStore((s) => s.bossWeakPointIndex)
@@ -119,17 +118,21 @@ export function Boss({
       if (!mesh.isMesh) return
       mesh.castShadow = true
       mesh.receiveShadow = true
-      if ((WEAK_NAMES as readonly string[]).includes(mesh.name)) {
+      // 해파리 대왕 같은 반투명(alphaMode BLEND) 메시는 depthWrite를 켜두면 겹친 부분이
+      // 깜빡인다(SeaMobs 가이드) — 투명 재질은 전부 depthWrite를 꺼서 막는다.
+      const mat = mesh.material as MeshStandardMaterial
+      if (mat?.transparent) mat.depthWrite = false
+      if (asset.weakNames.includes(mesh.name)) {
         mesh.material = (mesh.material as MeshStandardMaterial).clone()
-        weakMeshes.current[mesh.name as (typeof WEAK_NAMES)[number]] = mesh
+        weakMeshes.current[mesh.name] = mesh
       }
     })
     toRemove.forEach((obj) => obj.removeFromParent())
-  }, [model])
+  }, [model, asset.weakNames])
 
   useEffect(() => {
-    const activeName = WEAK_NAMES[weakIndex]
-    for (const name of WEAK_NAMES) {
+    const activeName = asset.weakNames[weakIndex]
+    for (const name of asset.weakNames) {
       const mesh = weakMeshes.current[name]
       if (!mesh) continue
       const mat = mesh.material as MeshStandardMaterial
@@ -144,7 +147,7 @@ export function Boss({
         mat.emissiveIntensity = 0
       }
     }
-  }, [weakIndex, bossExposed])
+  }, [weakIndex, bossExposed, asset.weakNames])
 
   useFrame(({ clock }, delta) => {
     const group = groupRef.current
@@ -168,13 +171,14 @@ export function Boss({
       group.rotation.y += delta * 0.05
     }
 
-    // 바다 위에 거의 잠기지 않고 크게 서 있도록, 파도 높이만 따라간다.
-    group.position.y = getWaveHeight(0, group.position.z, clock.getElapsedTime()) - SINK
+    // 파도 높이를 따라가되, waveInfluence로 보스마다 얼마나 출렁일지 조절한다(공중에
+    // 뜬 보스는 살짝만, 바다에 서 있는 거신은 그대로).
+    group.position.y = getWaveHeight(0, group.position.z, clock.getElapsedTime()) * asset.waveInfluence - asset.sink
   })
 
   if (bossDefeated) return null
 
-  const activeName = WEAK_NAMES[weakIndex]
+  const activeName = asset.weakNames[weakIndex]
 
   // onClick 대신 onPointerDown — Mob.tsx와 같은 이유(R3F onClick의 드래그 거리 판정 때문에
   // 간헐적으로 클릭이 씹히는 문제).
@@ -188,7 +192,7 @@ export function Boss({
     <group
       ref={groupRef}
       position={[0, 0, balance.boss.approachSpawnZ]}
-      scale={MODEL_SCALE}
+      scale={asset.scale}
       userData={{ hittable: true }}
     >
       <primitive object={model} onPointerDown={handleClick} />
@@ -196,4 +200,5 @@ export function Boss({
   )
 }
 
-useGLTF.preload(MODEL_URL)
+useGLTF.preload('/assets/boss-volcano-titan.glb')
+useGLTF.preload('/assets/boss-jelly-king.glb')

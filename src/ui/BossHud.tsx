@@ -1,5 +1,5 @@
 import { useGameStore } from '../state/gameStore'
-import { getEffectiveBossMaxHp } from '../data/stages'
+import { getEffectiveBossMaxHp, getStageDef } from '../data/stages'
 
 const WEAK_LABELS = ['머리', '가슴', '등']
 
@@ -15,7 +15,7 @@ export function BossHud() {
 
   return (
     <div className="boss-hud">
-      <div className="boss-hud__name">산호 거신</div>
+      <div className="boss-hud__name">{getStageDef(currentStageId).bossAsset.displayName}</div>
       <div className="boss-hud__bar">
         <div className="boss-hud__bar-fill" style={{ width: `${hpPct}%` }} />
       </div>

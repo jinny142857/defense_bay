@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import type { ThreeEvent } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import type { Object3D } from 'three'
 import { Sea } from './Sea'
 import { Mountains } from './Mountains'
-import { SEA_FOG, SUN_DIRECTION } from './SeaWater.js'
+import { StageScenery } from './StageScenery'
+import { getStageTheme } from '../config/stageThemes'
 import { Breakwater } from './Breakwater'
 import { Turret } from './Turret'
 import { Mob } from './Mob'
@@ -73,7 +75,6 @@ const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
 const BOSS_ORBIT_RADIUS = 18
 const BOSS_ORBIT_HEIGHT = 5
 const BOSS_LOOK_HEIGHT = 3
-const SUN_POSITION = SUN_DIRECTION.clone().multiplyScalar(500)
 
 interface MobEntity {
   id: string
@@ -276,6 +277,15 @@ function SceneContents() {
   const waveNumber = useGameStore((s) => s.waveNumber)
   const currentStageId = useGameStore((s) => s.currentStageId)
   const isBossWave = waveNumber === getStageDef(currentStageId).crabCountsByWave.length
+  const theme = getStageTheme(currentStageId)
+  const sunPosition = useMemo(
+    () => new Vector3(...theme.sun.dir).normalize().multiplyScalar(500),
+    [theme],
+  )
+  const { gl } = useThree()
+  useEffect(() => {
+    gl.toneMappingExposure = theme.exposure
+  }, [gl, theme])
   const bossActive = useGameStore((s) => s.bossActive)
   const bombardPulse = useGameStore((s) => s.supplyBombardPulse)
   const bossShellPulse = useGameStore((s) => s.bossShellPulse)
@@ -396,17 +406,18 @@ function SceneContents() {
     <>
       <CameraRig />
       <AimRay />
-      <fog attach="fog" args={[SEA_FOG.color, SEA_FOG.near, SEA_FOG.far]} />
-      <hemisphereLight args={[0xbac4c8, 0x1f3a40, 1.2]} />
-      <directionalLight position={SUN_POSITION} intensity={1.6} color={0xffe2c0} castShadow />
+      <fog attach="fog" args={[theme.fog.color, theme.fog.near, theme.fog.far]} />
+      <hemisphereLight args={[theme.hemi.sky, theme.hemi.ground, theme.hemi.intensity]} />
+      <directionalLight position={sunPosition} intensity={theme.sun.intensity} color={theme.sun.color} castShadow />
       <Spawner onSpawn={spawnMob} />
       <SupplyBoxSpawner onSpawn={spawnBox} hasActiveBox={boxes.length > 0} bossActive={bossActive} />
-      <Sea onPointerDown={handleMiss} />
-      <Mountains />
+      <Sea theme={theme} onPointerDown={handleMiss} />
+      {theme.sceneryUrl ? <StageScenery modelUrl={theme.sceneryUrl} waveAmp={theme.sea.waveAmp} /> : <Mountains />}
       <Breakwater />
       <Turret />
       {isBossWave && (
         <Boss
+          asset={getStageDef(currentStageId).bossAsset}
           onHit={(targetWeak, point) => {
             if (!tryFire()) {
               addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
@@ -548,6 +559,12 @@ function SceneContents() {
           onDone={() => setPopups((list) => list.filter((x) => x.id !== p.id))}
         />
       ))}
+      {/* 해파리 대왕 스테이지 — 산호/해파리 무리/보스의 발광 재질이 Bloom으로 번져 보이게 한다. */}
+      {theme.bloom && (
+        <EffectComposer>
+          <Bloom luminanceThreshold={0.8} mipmapBlur />
+        </EffectComposer>
+      )}
     </>
   )
 }

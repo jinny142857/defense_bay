@@ -66,11 +66,14 @@ export default function App() {
     preloadFlipbookSheets()
   }, [])
 
+  const currentStageId = useGameStore((s) => s.currentStageId)
   useEffect(() => {
     if (!showScene) return
-    sound.startLoop('rain', 'rainLoop', 0.3)
+    // 해파리 대왕 스테이지(달밤 바다)는 폭풍우가 아니라 잔잔한 밤바다 분위기라 빗소리를 약하게 깐다.
+    const rainVolume = currentStageId === 2 ? 0.08 : 0.3
+    sound.startLoop('rain', 'rainLoop', rainVolume)
     return () => sound.stopLoop('rain')
-  }, [showScene])
+  }, [showScene, currentStageId])
 
   const booting = !hydrated || !minTimeElapsed
 
