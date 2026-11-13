@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from './state/gameStore'
+import { getStageDef } from './data/stages'
 import { sound } from './game/sound'
 import { preloadFlipbookSheets } from './game/flipbookVfx'
 import { Scene } from './game/Scene'
@@ -21,6 +22,8 @@ const MIN_LOADING_MS = 900
 function WaveIntroScreen() {
   const beginWave = useGameStore((s) => s.beginWave)
   const waveNumber = useGameStore((s) => s.waveNumber)
+  const currentStageId = useGameStore((s) => s.currentStageId)
+  const totalWaves = getStageDef(currentStageId).crabCountsByWave.length
 
   useEffect(() => {
     const t = setTimeout(() => beginWave(), 2500)
@@ -29,8 +32,8 @@ function WaveIntroScreen() {
 
   return (
     <div className="screen screen--wave-intro">
-      <h1>WAVE {waveNumber} / 3</h1>
-      <p>{waveNumber === 3 ? '수평선 너머로 거대한 기척이 느껴집니다' : '수평선에서 괴수들이 다가옵니다'}</p>
+      <h1>WAVE {waveNumber} / {totalWaves}</h1>
+      <p>{waveNumber === totalWaves ? '수평선 너머로 거대한 기척이 느껴집니다' : '수평선에서 괴수들이 다가옵니다'}</p>
     </div>
   )
 }

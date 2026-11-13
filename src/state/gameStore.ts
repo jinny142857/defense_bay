@@ -2,8 +2,9 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { idbStorage } from './idbStorage'
 import { balance } from '../config/balance'
-import { STARTING_WEAPON_ID, STAGE1_CLEAR_UNLOCK_WEAPON_ID, WEAPON_DEFS } from '../data/weapons'
+import { STARTING_WEAPON_ID, WEAPON_DEFS } from '../data/weapons'
 import { STARTING_VEHICLE_ID } from '../data/vehicles'
+import { getEffectiveBossMaxHp, getStageDef, STAGE_DEFS } from '../data/stages'
 import { computeDiligenceGrade, computeStars } from './diligence'
 import type {
   ActiveSupplyQuestion,
@@ -16,13 +17,23 @@ import type {
   QuestionContext,
   SupplyBoxType,
 } from '../types'
-import questionsData from '../data/questions/math-g3-2-fraction.json'
+import stage1Questions from '../data/questions/math-g3-2-fraction.json'
+import stage2Questions from '../data/questions/math-g3-2-fraction-advanced.json'
 
-const questions = questionsData as Question[]
+// 스테이지마다 다른 문제 은행에서 뽑는다 — 스테이지 2는 "같은 분수 단원, 심화" 문제로 채운다.
+const QUESTION_POOLS: Record<number, Question[]> = {
+  1: stage1Questions as Question[],
+  2: stage2Questions as Question[],
+}
+
+function getQuestionPool(stageId: number): Question[] {
+  return QUESTION_POOLS[stageId] ?? QUESTION_POOLS[1]
+}
+
 type WeakIndex = 0 | 1 | 2
 
-function pickQuestions(count: number, excludeIds: Set<string>): Question[] {
-  const pool = questions.filter((q) => !excludeIds.has(q.id))
+function pickQuestions(stageId: number, count: number, excludeIds: Set<string>): Question[] {
+  const pool = getQuestionPool(stageId).filter((q) => !excludeIds.has(q.id))
   const picked: Question[] = []
   for (let i = 0; i < count && pool.length > 0; i++) {
     const idx = Math.floor(Math.random() * pool.length)
@@ -44,6 +55,10 @@ interface GameState {
   stageAttempts: Attempt[]
   rapidStreak: number
   readLockMultiplier: number
+
+  currentStageId: number
+  maxStageUnlocked: number
+  stageClears: Partial<Record<number, { stars: 1 | 2 | 3; grade: DiligenceGrade }>>
 
   stageStars: 1 | 2 | 3 | null
   stageGrade: DiligenceGrade | null
@@ -96,7 +111,7 @@ interface GameState {
 
   // --- actions ---
   goToLobby: () => void
-  startStage: () => void
+  startStage: (stageId?: number) => void
   retryWave: () => void
   beginPreCheck: () => void
   answerPreCheck: (slotKey: PreCheckSlot['key'], choice: number, responseMs: number) => void
@@ -173,8 +188,9 @@ function getEffectiveAttack(get: GetFn): number {
 
 function tryEnterDebrief(set: SetFn, get: GetFn) {
   if (!get().canEnterDebrief()) return
-  const used = get().usedQuestionIds
-  const picked = pickQuestions(balance.debrief.questionCount, used)
+  const s = get()
+  const used = s.usedQuestionIds
+  const picked = pickQuestions(s.currentStageId, balance.debrief.questionCount, used)
   picked.forEach((q) => used.add(q.id))
   set({ phase: 'DEBRIEF', debriefQuestions: picked, debriefAttempts: [], usedQuestionIds: used })
 }
@@ -216,7 +232,11 @@ export const useGameStore = create<GameState>()(
       stageAttempts: [],
       rapidStreak: 0,
       readLockMultiplier: 1,
-    
+
+      currentStageId: 1,
+      maxStageUnlocked: 1,
+      stageClears: {},
+
       stageStars: null,
       stageGrade: null,
     
@@ -263,8 +283,10 @@ export const useGameStore = create<GameState>()(
 
       goToLobby: () => set({ phase: 'LOBBY' }),
 
-      startStage: () => {
+      startStage: (stageId) => {
+        const resolvedStageId = stageId ?? get().currentStageId
         set({
+          currentStageId: resolvedStageId,
           waveNumber: 1,
           durability: balance.combat.breakwaterMaxDurability,
           attackBuffPct: 0,
@@ -289,7 +311,7 @@ export const useGameStore = create<GameState>()(
           bossActive: false,
           bossTriggered: false,
           bossDefeated: false,
-          bossHp: balance.boss.maxHp,
+          bossHp: getEffectiveBossMaxHp(resolvedStageId),
           bossWeakPointIndex: 0,
           bossExposed: true,
           bossAttackTelegraphed: false,
@@ -323,7 +345,7 @@ export const useGameStore = create<GameState>()(
           bossActive: false,
           bossTriggered: false,
           bossDefeated: false,
-          bossHp: balance.boss.maxHp,
+          bossHp: getEffectiveBossMaxHp(s.currentStageId),
           bossWeakPointIndex: 0,
           bossExposed: true,
           bossAttackTelegraphed: false,
@@ -335,8 +357,9 @@ export const useGameStore = create<GameState>()(
       },
 
       beginPreCheck: () => {
-        const used = get().usedQuestionIds
-        const picked = pickQuestions(balance.preCheckQuestionCount, used)
+        const s = get()
+        const used = s.usedQuestionIds
+        const picked = pickQuestions(s.currentStageId, balance.preCheckQuestionCount, used)
         const byKey: Record<string, Question> = {}
         PRE_CHECK_SLOTS.forEach((slot, i) => {
           if (picked[i]) byKey[slot.key] = picked[i]
@@ -392,8 +415,9 @@ export const useGameStore = create<GameState>()(
     
       beginWave: () => {
         const s = get()
-        const crabsTotal = balance.wave.crabCountsByWave[s.waveNumber - 1]
-        const isBossWave = s.waveNumber === 3
+        const stageDef = getStageDef(s.currentStageId)
+        const crabsTotal = stageDef.crabCountsByWave[s.waveNumber - 1]
+        const isBossWave = s.waveNumber === stageDef.crabCountsByWave.length
         set({
           phase: 'COMBAT',
           crabsTotal,
@@ -404,7 +428,7 @@ export const useGameStore = create<GameState>()(
                 bossActive: false,
                 bossDefeated: false,
                 bossTriggered: false,
-                bossHp: balance.boss.maxHp,
+                bossHp: getEffectiveBossMaxHp(s.currentStageId),
                 bossWeakPointIndex: 0 as WeakIndex,
                 bossExposed: true,
                 bossAttackTelegraphed: false,
@@ -430,7 +454,8 @@ export const useGameStore = create<GameState>()(
     
       bossArrived: () => {
         const s = get()
-        if (s.waveNumber !== 3 || s.bossTriggered || s.bossDefeated) return
+        const isBossWave = s.waveNumber === getStageDef(s.currentStageId).crabCountsByWave.length
+        if (!isBossWave || s.bossTriggered || s.bossDefeated) return
         set({ phase: 'BOSS_INTRO', bossTriggered: true })
       },
 
@@ -447,9 +472,9 @@ export const useGameStore = create<GameState>()(
         const effectiveWeak = targetWeak && s.bossExposed
         const dmg = effectiveAttack * (effectiveWeak ? balance.boss.weakMultiplier : balance.boss.normalMultiplier)
         const nextHp = Math.max(0, s.bossHp - dmg)
-    
+
         let weakIndex: WeakIndex = s.bossWeakPointIndex
-        const pct = nextHp / balance.boss.maxHp
+        const pct = nextHp / getEffectiveBossMaxHp(s.currentStageId)
         if (pct <= 0.33) weakIndex = 2
         else if (pct <= 0.66 && weakIndex < 1) weakIndex = 1
     
@@ -498,13 +523,14 @@ export const useGameStore = create<GameState>()(
       resolveBossAttack: () => {
         const s = get()
         if (!s.bossShellFlying) return
+        const attackDamage = balance.boss.attackDamage * getStageDef(s.currentStageId).bossDamageMultiplier
         set({
           bossShellFlying: false,
-          durability: Math.max(0, s.durability - balance.boss.attackDamage),
+          durability: Math.max(0, s.durability - attackDamage),
         })
         checkDefeat(set, get)
       },
-    
+
       // 질문을 못 띄우면(이미 다른 문제가 떠 있거나, 낼 문제가 없음) false를 돌려준다 — 호출부
       // (Scene.tsx)가 이 값을 보고서야 상자를 치운다. 예전엔 무조건 상자부터 치웠는데, 그러면
       // "맞혔는데 문제가 안 뜨고 상자만 사라지는" 버그로 보였다.
@@ -512,7 +538,7 @@ export const useGameStore = create<GameState>()(
         const s = get()
         if (s.activeSupplyQuestion) return false
         const used = s.usedQuestionIds
-        const [q] = pickQuestions(1, used)
+        const [q] = pickQuestions(s.currentStageId, 1, used)
         if (!q) return false
         used.add(q.id)
         set({ activeSupplyQuestion: { boxType, question: q }, usedQuestionIds: used })
@@ -554,7 +580,7 @@ export const useGameStore = create<GameState>()(
             resultText = '공중 포격 지원!'
             const st2 = get()
             if (st2.bossActive && !st2.bossDefeated) {
-              const dmg = balance.boss.maxHp * b.bombardBossDamagePct
+              const dmg = getEffectiveBossMaxHp(st2.currentStageId) * b.bombardBossDamagePct
               const nextHp = Math.max(0, st2.bossHp - dmg)
               const defeated = nextHp <= 0
               set({
@@ -593,10 +619,11 @@ export const useGameStore = create<GameState>()(
         recordAttempt(set, get, { questionId: q.id, context: 'debrief', choice, correct, responseMs })
     
         if (attempts.length >= balance.debrief.questionCount && get().canEnterMaintenance()) {
-          const used = get().usedQuestionIds
-          const [repairQ] = pickQuestions(1, used)
+          const afterAnswer = get()
+          const used = afterAnswer.usedQuestionIds
+          const [repairQ] = pickQuestions(afterAnswer.currentStageId, 1, used)
           if (repairQ) used.add(repairQ.id)
-          const [bonusQ] = pickQuestions(1, used)
+          const [bonusQ] = pickQuestions(afterAnswer.currentStageId, 1, used)
           if (bonusQ) used.add(bonusQ.id)
           set({
             phase: 'MAINTENANCE',
@@ -635,7 +662,7 @@ export const useGameStore = create<GameState>()(
         const nextUsed = after.maintenanceBonusUsed + 1
         const reward = correct ? balance.maintenance.bonusPartsReward[after.maintenanceBonusUsed] ?? 0 : 0
         const [nextBonusQ] =
-          nextUsed < balance.maintenance.bonusMaxAttempts ? pickQuestions(1, used) : []
+          nextUsed < balance.maintenance.bonusMaxAttempts ? pickQuestions(after.currentStageId, 1, used) : []
         if (nextBonusQ) used.add(nextBonusQ.id)
         set({
           maintenanceBonusUsed: nextUsed,
@@ -648,20 +675,31 @@ export const useGameStore = create<GameState>()(
     
       finishMaintenance: () => {
         const s = get()
-        if (s.waveNumber < 3) {
+        const stageDef = getStageDef(s.currentStageId)
+        if (s.waveNumber < stageDef.crabCountsByWave.length) {
           set({ waveNumber: s.waveNumber + 1 })
           get().beginPreCheck()
           return
         }
-    
+
         const grade = computeDiligenceGrade(s.stageAttempts)
         const durabilityPct = s.durability / balance.combat.breakwaterMaxDurability
         const stars = computeStars(grade, durabilityPct)
         const clearBonus = balance.hangar.clearBonusPerStar * stars
-        const ownedWeapons = s.ownedWeapons.includes(STAGE1_CLEAR_UNLOCK_WEAPON_ID)
-          ? s.ownedWeapons
-          : [...s.ownedWeapons, STAGE1_CLEAR_UNLOCK_WEAPON_ID]
-    
+
+        const unlock = stageDef.clearUnlock
+        const ownedWeapons =
+          unlock?.weaponId && !s.ownedWeapons.includes(unlock.weaponId)
+            ? [...s.ownedWeapons, unlock.weaponId]
+            : s.ownedWeapons
+        const ownedVehicles =
+          unlock?.vehicleId && !s.ownedVehicles.includes(unlock.vehicleId)
+            ? [...s.ownedVehicles, unlock.vehicleId]
+            : s.ownedVehicles
+        const weaponLevels = unlock?.weaponId
+          ? { ...s.weaponLevels, [unlock.weaponId]: s.weaponLevels[unlock.weaponId] ?? 1 }
+          : s.weaponLevels
+
         set({
           phase: 'STAGE_RESULT',
           parts: s.parts + clearBonus,
@@ -669,7 +707,10 @@ export const useGameStore = create<GameState>()(
           stageStars: stars,
           stageGrade: grade,
           ownedWeapons,
-          weaponLevels: { ...s.weaponLevels, [STAGE1_CLEAR_UNLOCK_WEAPON_ID]: s.weaponLevels[STAGE1_CLEAR_UNLOCK_WEAPON_ID] ?? 1 },
+          ownedVehicles,
+          weaponLevels,
+          maxStageUnlocked: Math.min(STAGE_DEFS.length, Math.max(s.maxStageUnlocked, s.currentStageId + 1)),
+          stageClears: { ...s.stageClears, [s.currentStageId]: { stars, grade } },
         })
       },
     
@@ -697,7 +738,7 @@ export const useGameStore = create<GameState>()(
     
         if (nextLevel >= balance.hangar.upgradeQuestionGateLevel) {
           const used = s.usedQuestionIds
-          const [q] = pickQuestions(1, used)
+          const [q] = pickQuestions(s.currentStageId, 1, used)
           if (!q) return
           used.add(q.id)
           set({
@@ -734,7 +775,8 @@ export const useGameStore = create<GameState>()(
         const s = get()
         if (s.phase !== 'COMBAT') return false
         if (s.crabsRemaining !== 0) return false
-        if (s.waveNumber === 3 && !s.bossDefeated) return false
+        const isBossWave = s.waveNumber === getStageDef(s.currentStageId).crabCountsByWave.length
+        if (isBossWave && !s.bossDefeated) return false
         return true
       },
       canEnterMaintenance: () =>

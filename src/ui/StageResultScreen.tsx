@@ -8,10 +8,11 @@ export function StageResultScreen() {
   const stagePartsEarned = useGameStore((s) => s.stagePartsEarned)
   const durability = useGameStore((s) => s.durability)
   const goToHangar = useGameStore((s) => s.goToHangar)
+  const currentStageId = useGameStore((s) => s.currentStageId)
 
   return (
     <div className="screen screen--stage-result">
-      <h1>STAGE 1 클리어!</h1>
+      <h1>STAGE {currentStageId} 클리어!</h1>
       <div className="stage-result__stars">
         {[1, 2, 3].map((n) => (
           <span key={n} className={n <= (stageStars ?? 0) ? 'star is-filled' : 'star'}>

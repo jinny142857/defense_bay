@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
+import { getStageDef } from '../data/stages'
 import { aimSignal } from '../game/aimSignal'
 import { BossHud } from './BossHud'
 import { QuestionModal } from './QuestionModal'
@@ -90,6 +91,8 @@ export function CombatHUD() {
   const bossActive = useGameStore((s) => s.bossActive)
   const activeSupplyQuestion = useGameStore((s) => s.activeSupplyQuestion)
   const answerSupplyBox = useGameStore((s) => s.answerSupplyBox)
+  const currentStageId = useGameStore((s) => s.currentStageId)
+  const isBossWave = waveNumber === getStageDef(currentStageId).crabCountsByWave.length
 
   const durabilityPct = Math.round((durability / balance.combat.breakwaterMaxDurability) * 100)
 
@@ -98,7 +101,7 @@ export function CombatHUD() {
       {bossActive && <BossHud />}
       <div className="hud__top-left">
         <div className="hud__counter">WAVE {waveNumber} · 남은 괴수: {crabsRemaining} / {crabsTotal}</div>
-        {waveNumber === 3 && !bossActive && (
+        {isBossWave && !bossActive && (
           <div className="boss-hud__warning">⚠ 거대한 그림자가 수평선에서 다가오고 있습니다...</div>
         )}
         <div className="hud__counter">부품 ⚙ {parts}</div>

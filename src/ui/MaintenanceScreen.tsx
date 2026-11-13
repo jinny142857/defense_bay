@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
+import { getStageDef } from '../data/stages'
 import { QuestionModal } from './QuestionModal'
 
 export function MaintenanceScreen() {
@@ -13,6 +14,8 @@ export function MaintenanceScreen() {
   const answerMaintenanceBonus = useGameStore((s) => s.answerMaintenanceBonus)
   const finishMaintenance = useGameStore((s) => s.finishMaintenance)
   const waveNumber = useGameStore((s) => s.waveNumber)
+  const currentStageId = useGameStore((s) => s.currentStageId)
+  const totalWaves = getStageDef(currentStageId).crabCountsByWave.length
 
   const [openModal, setOpenModal] = useState<'repair' | 'bonus' | null>(null)
   const bonusRemaining = balance.maintenance.bonusMaxAttempts - bonusUsed
@@ -48,7 +51,7 @@ export function MaintenanceScreen() {
       </div>
 
       <button className="maintenance__next" onClick={finishMaintenance}>
-        {waveNumber < 3 ? '다음 웨이브 시작' : '스테이지 결과 보기'}
+        {waveNumber < totalWaves ? '다음 웨이브 시작' : '스테이지 결과 보기'}
       </button>
 
       {openModal === 'repair' && repairQuestion && (

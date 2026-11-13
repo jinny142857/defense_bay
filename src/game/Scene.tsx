@@ -23,6 +23,7 @@ import { aimSignal } from './aimSignal'
 import { raycastTargets } from './raycastRegistry'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
+import { getStageDef } from '../data/stages'
 import { useGameStore } from '../state/gameStore'
 import type { MobKind, SupplyBoxType } from '../types'
 
@@ -273,6 +274,8 @@ function SceneContents() {
   const openSupplyBox = useGameStore((s) => s.openSupplyBox)
   const damageBoss = useGameStore((s) => s.damageBoss)
   const waveNumber = useGameStore((s) => s.waveNumber)
+  const currentStageId = useGameStore((s) => s.currentStageId)
+  const isBossWave = waveNumber === getStageDef(currentStageId).crabCountsByWave.length
   const bossActive = useGameStore((s) => s.bossActive)
   const bombardPulse = useGameStore((s) => s.supplyBombardPulse)
   const bossShellPulse = useGameStore((s) => s.bossShellPulse)
@@ -402,7 +405,7 @@ function SceneContents() {
       <Mountains />
       <Breakwater />
       <Turret />
-      {waveNumber === 3 && (
+      {isBossWave && (
         <Boss
           onHit={(targetWeak, point) => {
             if (!tryFire()) {

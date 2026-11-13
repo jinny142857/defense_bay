@@ -76,7 +76,7 @@ export interface WeaponDef {
 export interface VehicleDef {
   id: string
   name: string
-  // 잠긴 기체 카드에 보여줄 해금 조건 설명 (v1은 스테이지 1까지만 다뤄서 실제로 풀리진 않는다)
+  // 잠긴 기체 카드에 보여줄 해금 조건 설명 (실제 해금은 data/stages.ts의 clearUnlock이 처리)
   unlockHint: string
 }
 

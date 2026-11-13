@@ -103,7 +103,7 @@ export function HangarScreen() {
         </div>
       </div>
 
-      <button className="hangar__sortie" onClick={startStage}>
+      <button className="hangar__sortie" onClick={() => startStage()}>
         다시 출격
       </button>
 

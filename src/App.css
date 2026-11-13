@@ -129,6 +129,7 @@
 /* --- 출격 준비(로비) --- */
 .lobby__cards {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   margin-top: 16px;
 }
@@ -163,6 +164,10 @@
 
 .lobby__card--defense::after {
   background: var(--accent-orange-1);
+}
+
+.lobby__card--stage2::after {
+  background: var(--hazard-yellow);
 }
 
 .lobby__card--upgrade::after {

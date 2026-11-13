@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import { Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
-import { balance } from '../config/balance'
+import { getScaledMobStats } from '../data/stages'
 import { useGameStore } from '../state/gameStore'
 import { MobHealthBar } from './MobHealthBar'
 import { raycastTargets } from './raycastRegistry'
@@ -63,7 +63,8 @@ export function Mob({
   // (이중 집계 방지 — 부모가 점수/카운트 반영 여부를 다르게 처리).
   onKilled: (atWall: boolean) => void
 }) {
-  const { speed, sink, scale, hp: maxHp } = balance.mobs[kind]
+  const currentStageId = useGameStore((s) => s.currentStageId)
+  const { speed, sink, scale, hp: maxHp } = getScaledMobStats(kind, currentStageId)
   const { scene } = useGLTF(MOB_URLS[kind])
   const model = useMemo(() => scene.clone(true), [scene])
   const groupRef = useRef<Group>(null)
