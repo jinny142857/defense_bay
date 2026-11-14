@@ -73,16 +73,42 @@ export interface WeaponDef {
   baseFireRate: number
 }
 
+// 기체별 3D 렌더링 정보 — Turret.tsx가 이걸 보고 어떤 전차 모델을 어떻게 띄울지 결정한다.
+// 지정하지 않은 기체는 vehicles.ts의 DEFAULT_VEHICLE_RENDER(기존 파란 전차)를 그대로 쓴다.
+export interface VehicleRenderAsset {
+  modelUrl: string
+  scale: number
+  // 모델 정면(로컬 +X)을 게임 전방(-Z)에 맞추는 보정 회전.
+  wrapperRotationY: number
+  // 발사 시 Barrel_Recoil이 뒤로 밀리는 거리(모델 로컬 단위, Tank_Root 하위 계층 기준).
+  recoilDistance: number
+  // 지정하면 기존 평면 예광탄 대신 이 포탄 모델이 포구→명중 지점으로 실제로 날아간다.
+  shellModelUrl?: string
+}
+
 export interface VehicleDef {
   id: string
   name: string
-  // 잠긴 기체 카드에 보여줄 해금 조건 설명 (실제 해금은 data/stages.ts의 clearUnlock이 처리)
+  // 잠긴 기체 카드에 보여줄 해금 조건 설명 (스테이지 클리어로 해금되는 기체용. 실제 해금은
+  // data/stages.ts의 clearUnlock이 처리)
   unlockHint: string
+  render?: VehicleRenderAsset
+  // 지정하면 격납고에서 부품으로 직접 구매할 수 있다(스테이지 클리어 해금과는 별개 경로).
+  purchaseCost?: number
+  // 장착 시 무기 공격력/발사속도에 곱해지는 보너스(0.15 = +15%). 레드 썬더 Mk.II 전용.
+  attackPct?: number
+  fireRatePct?: number
 }
 
 export interface PendingUpgrade {
   weaponId: string
   nextLevel: number
+  escrowedParts: number
+  question: Question
+}
+
+export interface PendingVehiclePurchase {
+  vehicleId: string
   escrowedParts: number
   question: Question
 }

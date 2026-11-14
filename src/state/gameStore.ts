@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { idbStorage } from './idbStorage'
 import { balance } from '../config/balance'
 import { STARTING_WEAPON_ID, WEAPON_DEFS } from '../data/weapons'
-import { STARTING_VEHICLE_ID } from '../data/vehicles'
+import { STARTING_VEHICLE_ID, VEHICLE_DEFS } from '../data/vehicles'
 import { getEffectiveBossMaxHp, getStageDef, STAGE_DEFS } from '../data/stages'
 import { computeDiligenceGrade, computeStars } from './diligence'
 import type {
@@ -12,6 +12,7 @@ import type {
   DiligenceGrade,
   GamePhase,
   PendingUpgrade,
+  PendingVehiclePurchase,
   PreCheckSlot,
   Question,
   QuestionContext,
@@ -108,6 +109,7 @@ interface GameState {
 
   ownedVehicles: string[]
   equippedVehicleId: string
+  pendingVehiclePurchase: PendingVehiclePurchase | null
 
   // --- actions ---
   goToLobby: () => void
@@ -148,6 +150,8 @@ interface GameState {
   equipVehicle: (vehicleId: string) => void
   requestUpgrade: (weaponId: string) => void
   answerUpgrade: (choice: number, responseMs: number) => void
+  requestVehiclePurchase: (vehicleId: string) => void
+  answerVehiclePurchase: (choice: number, responseMs: number) => void
 
   // --- guards (derived, used by tests and UI) ---
   canEnterDebrief: () => boolean
@@ -183,7 +187,8 @@ function getEffectiveAttack(get: GetFn): number {
   const weapon = WEAPON_DEFS[s.equippedWeaponId]
   const level = s.weaponLevels[s.equippedWeaponId] ?? 1
   const buffMultiplier = Math.max(0.4, 1 + s.attackBuffPct)
-  return weapon.baseAttack * (1 + balance.hangar.attackPctPerLevel * (level - 1)) * buffMultiplier
+  const vehicleMultiplier = 1 + (VEHICLE_DEFS[s.equippedVehicleId]?.attackPct ?? 0)
+  return weapon.baseAttack * (1 + balance.hangar.attackPctPerLevel * (level - 1)) * buffMultiplier * vehicleMultiplier
 }
 
 function tryEnterDebrief(set: SetFn, get: GetFn) {
@@ -280,6 +285,7 @@ export const useGameStore = create<GameState>()(
 
       ownedVehicles: [STARTING_VEHICLE_ID],
       equippedVehicleId: STARTING_VEHICLE_ID,
+      pendingVehiclePurchase: null,
 
       goToLobby: () => set({ phase: 'LOBBY' }),
 
@@ -770,7 +776,43 @@ export const useGameStore = create<GameState>()(
           set((st) => ({ parts: st.parts + p.escrowedParts, pendingUpgrade: null }))
         }
       },
-    
+
+      // 스테이지 클리어 해금과 별개로, 격납고에서 부품으로 바로 사는 기체(레드 썬더 Mk.II).
+      // 무기 강화(requestUpgrade)와 같은 패턴 — 비용을 먼저 떼어 escrow하고 문제를 맞혀야
+      // 확정되며, 틀리면 부품을 돌려준다.
+      requestVehiclePurchase: (vehicleId) => {
+        const s = get()
+        if (s.ownedVehicles.includes(vehicleId) || s.pendingVehiclePurchase) return
+        const cost = VEHICLE_DEFS[vehicleId]?.purchaseCost
+        if (!cost || s.parts < cost) return
+        const used = s.usedQuestionIds
+        const [q] = pickQuestions(s.currentStageId, 1, used)
+        if (!q) return
+        used.add(q.id)
+        set({
+          parts: s.parts - cost,
+          usedQuestionIds: used,
+          pendingVehiclePurchase: { vehicleId, escrowedParts: cost, question: q },
+        })
+      },
+
+      answerVehiclePurchase: (choice, responseMs) => {
+        const s = get()
+        const p = s.pendingVehiclePurchase
+        if (!p) return
+        const correct = choice === p.question.answer
+        recordAttempt(set, get, { questionId: p.question.id, context: 'upgrade', choice, correct, responseMs })
+
+        if (correct) {
+          set((st) => ({
+            ownedVehicles: st.ownedVehicles.includes(p.vehicleId) ? st.ownedVehicles : [...st.ownedVehicles, p.vehicleId],
+            pendingVehiclePurchase: null,
+          }))
+        } else {
+          set((st) => ({ parts: st.parts + p.escrowedParts, pendingVehiclePurchase: null }))
+        }
+      },
+
       canEnterDebrief: () => {
         const s = get()
         if (s.phase !== 'COMBAT') return false

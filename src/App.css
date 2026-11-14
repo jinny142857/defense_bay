@@ -778,6 +778,16 @@
   opacity: 0.4;
 }
 
+.hangar__vehicle.is-purchasable {
+  border-color: var(--accent-orange-1);
+  cursor: pointer;
+}
+
+.hangar__vehicle.is-purchasable:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .hangar__vehicle-name {
   font-weight: 700;
 }

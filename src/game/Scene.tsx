@@ -15,6 +15,7 @@ import { SupplyBox } from './SupplyBox'
 import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
 import { BossShell } from './BossShell'
 import { Projectile } from './Projectile'
+import { ShellProjectile } from './ShellProjectile'
 import { MuzzleFlash } from './MuzzleFlash'
 import { ImpactEffect } from './ImpactEffect'
 import { WaterBurstEffect } from './WaterBurstEffect'
@@ -22,9 +23,11 @@ import { DamagePopup } from './DamagePopup'
 import { triggerFireSignal } from './fireSignal'
 import { sound } from './sound'
 import { aimSignal } from './aimSignal'
+import { muzzleSignal } from './muzzleSignal'
 import { raycastTargets } from './raycastRegistry'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
+import { getVehicleRender, VEHICLE_DEFS } from '../data/vehicles'
 import { getStageDef } from '../data/stages'
 import { useGameStore } from '../state/gameStore'
 import type { MobKind, SupplyBoxType } from '../types'
@@ -47,8 +50,6 @@ const BOX_Z = -16
 // SupplyBox가 모델의 실제 바닥(튜브)을 기준으로 이 높이에 맞춰 띄우므로, 이제는 수면 자체의
 // 높이(0 부근)만 쓰면 된다 — 살짝 음수로 둬서 튜브가 물에 약간 잠긴 듯 보이게 한다.
 const BOX_GROUND_Y = -0.05
-const MUZZLE: [number, number, number] = [0, 1.63, -8.3]
-const MUZZLE_VEC = new Vector3(...MUZZLE)
 const MOB_IMPACT_COLOR = '#ff5a36'
 const BOSS_IMPACT_COLOR = '#4ad9c9'
 const MOB_HIT_POPUP_COLOR = '#f3e9d2'
@@ -93,6 +94,9 @@ interface Tracer {
   id: string
   from: [number, number, number]
   to: [number, number, number]
+  // 장착 기체가 전용 포탄 모델을 지정했으면(예: 레드 썬더 Mk.II) 평면 예광탄 대신 이 모델이
+  // 실제로 날아간다.
+  shellModelUrl?: string
 }
 
 interface Impact {
@@ -225,6 +229,7 @@ function CameraRig() {
 }
 
 const aimHitPoint = new Vector3()
+const muzzleWorldPoint = new Vector3()
 
 // 매 프레임 포인터 위치로 레이캐스트해 "지금 쏘면 맞는지"를 판정, 2D HUD 크로스헤어(aimSignal)에
 // 공유한다. 명중 대상(몹/보급상자/보스)은 userData.hittable=true로 표시해 올라가며 판별한다.
@@ -253,7 +258,8 @@ function AimRay() {
     aimSignal.hit = hittable
     aimSignal.screenX = (pointer.x + 1) / 2
     aimSignal.screenY = (1 - pointer.y) / 2
-    aimSignal.distanceM = MUZZLE_VEC.distanceTo(aimHitPoint)
+    muzzleWorldPoint.set(muzzleSignal.x, muzzleSignal.y, muzzleSignal.z)
+    aimSignal.distanceM = muzzleWorldPoint.distanceTo(aimHitPoint)
     aimSignal.worldX = aimHitPoint.x
     aimSignal.worldY = aimHitPoint.y
     aimSignal.worldZ = aimHitPoint.z
@@ -265,7 +271,7 @@ function SceneContents() {
   const [mobs, setMobs] = useState<MobEntity[]>([])
   const [boxes, setBoxes] = useState<BoxEntity[]>([])
   const [tracers, setTracers] = useState<Tracer[]>([])
-  const [flashes, setFlashes] = useState<{ id: string }[]>([])
+  const [flashes, setFlashes] = useState<{ id: string; position: [number, number, number] }[]>([])
   const [impacts, setImpacts] = useState<Impact[]>([])
   const [waterBursts, setWaterBursts] = useState<WaterBurst[]>([])
   const [popups, setPopups] = useState<Popup[]>([])
@@ -293,6 +299,7 @@ function SceneContents() {
   const resolveBossAttack = useGameStore((s) => s.resolveBossAttack)
   const fireRateBuffPct = useGameStore((s) => s.fireRateBuffPct)
   const equippedWeaponId = useGameStore((s) => s.equippedWeaponId)
+  const equippedVehicleId = useGameStore((s) => s.equippedVehicleId)
   const infiniteReloadUntil = useGameStore((s) => s.infiniteReloadUntil)
   const nextId = useRef(0)
   const lastShotAtRef = useRef(0)
@@ -340,7 +347,8 @@ function SceneContents() {
     const weapon = WEAPON_DEFS[equippedWeaponId]
     // fireRateBuffPct도 attackBuffPct와 같은 이유(웨이브 넘길 때 리셋 안 되고 누적)로 하한을 둔다 —
     // 안 그러면 쿨다운이 몇 초까지 늘어나 "쏴도 반응이 없다"처럼 보일 수 있다.
-    const fireRate = weapon.baseFireRate * Math.max(0.5, 1 + fireRateBuffPct)
+    const vehicleFireRateMultiplier = 1 + (VEHICLE_DEFS[equippedVehicleId]?.fireRatePct ?? 0)
+    const fireRate = weapon.baseFireRate * Math.max(0.5, 1 + fireRateBuffPct) * vehicleFireRateMultiplier
     const intervalMs = 1000 / fireRate
     if (now - lastShotAtRef.current < intervalMs) return false
     lastShotAtRef.current = now
@@ -366,8 +374,10 @@ function SceneContents() {
 
   const addTracer = (to: [number, number, number]) => {
     const id = `tracer-${nextId.current++}`
-    setTracers((list) => [...list, { id, from: MUZZLE, to }])
-    setFlashes((list) => [...list, { id: `flash-${nextId.current++}` }])
+    const from: [number, number, number] = [muzzleSignal.x, muzzleSignal.y, muzzleSignal.z]
+    const shellModelUrl = getVehicleRender(equippedVehicleId).shellModelUrl
+    setTracers((list) => [...list, { id, from, to, shellModelUrl }])
+    setFlashes((list) => [...list, { id: `flash-${nextId.current++}`, position: from }])
     triggerFireSignal()
     sound.playCannonFire()
   }
@@ -519,18 +529,28 @@ function SceneContents() {
           }}
         />
       ))}
-      {tracers.map((t) => (
-        <Projectile
-          key={t.id}
-          from={t.from}
-          to={t.to}
-          onDone={() => setTracers((list) => list.filter((x) => x.id !== t.id))}
-        />
-      ))}
+      {tracers.map((t) =>
+        t.shellModelUrl ? (
+          <ShellProjectile
+            key={t.id}
+            modelUrl={t.shellModelUrl}
+            from={t.from}
+            to={t.to}
+            onDone={() => setTracers((list) => list.filter((x) => x.id !== t.id))}
+          />
+        ) : (
+          <Projectile
+            key={t.id}
+            from={t.from}
+            to={t.to}
+            onDone={() => setTracers((list) => list.filter((x) => x.id !== t.id))}
+          />
+        ),
+      )}
       {flashes.map((f) => (
         <MuzzleFlash
           key={f.id}
-          position={MUZZLE}
+          position={f.position}
           onDone={() => setFlashes((list) => list.filter((x) => x.id !== f.id))}
         />
       ))}

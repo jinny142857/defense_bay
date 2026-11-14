@@ -21,14 +21,20 @@ export function HangarScreen() {
   const ownedVehicles = useGameStore((s) => s.ownedVehicles)
   const equippedVehicleId = useGameStore((s) => s.equippedVehicleId)
   const equipVehicle = useGameStore((s) => s.equipVehicle)
+  const pendingVehiclePurchase = useGameStore((s) => s.pendingVehiclePurchase)
+  const requestVehiclePurchase = useGameStore((s) => s.requestVehiclePurchase)
+  const answerVehiclePurchase = useGameStore((s) => s.answerVehiclePurchase)
 
   const equippedDef = WEAPON_DEFS[equippedWeaponId]
   const equippedLevel = weaponLevels[equippedWeaponId] ?? 1
   const nextLevel = equippedLevel + 1
   const upgradeCost = balance.hangar.upgradeCostPerLevel * equippedLevel
+  const vehicleAttackMultiplier = 1 + (VEHICLE_DEFS[equippedVehicleId]?.attackPct ?? 0)
+  const vehicleFireRateMultiplier = 1 + (VEHICLE_DEFS[equippedVehicleId]?.fireRatePct ?? 0)
   const effectiveAttack = Math.round(
-    equippedDef.baseAttack * (1 + balance.hangar.attackPctPerLevel * (equippedLevel - 1)),
+    equippedDef.baseAttack * (1 + balance.hangar.attackPctPerLevel * (equippedLevel - 1)) * vehicleAttackMultiplier,
   )
+  const effectiveFireRate = equippedDef.baseFireRate * vehicleFireRateMultiplier
 
   return (
     <div className="screen screen--hangar">
@@ -42,6 +48,22 @@ export function HangarScreen() {
         {ALL_VEHICLE_IDS.map((id) => {
           const def = VEHICLE_DEFS[id]
           const owned = ownedVehicles.includes(id)
+          const purchasable = !owned && def.purchaseCost != null
+          if (purchasable) {
+            const cost = def.purchaseCost ?? 0
+            const canAfford = parts >= cost && !pendingVehiclePurchase
+            return (
+              <button
+                key={id}
+                className="hangar__vehicle is-purchasable"
+                disabled={!canAfford}
+                onClick={() => requestVehiclePurchase(id)}
+              >
+                <span className="hangar__vehicle-name">{def.name}</span>
+                <span className="hangar__vehicle-hint">구매 ⚙ {cost} · 문제 통과 필요</span>
+              </button>
+            )
+          }
           return (
             <button
               key={id}
@@ -87,7 +109,7 @@ export function HangarScreen() {
 
         <div className="hangar__detail">
           <h2>{equippedDef.name} · Lv.{equippedLevel}</h2>
-          <p>공격력 {effectiveAttack} · 발사속도 {equippedDef.baseFireRate.toFixed(1)}/초</p>
+          <p>공격력 {effectiveAttack} · 발사속도 {effectiveFireRate.toFixed(1)}/초</p>
           {equippedLevel >= balance.hangar.maxLevel ? (
             <p className="hangar__max">최대 레벨입니다</p>
           ) : (
@@ -113,6 +135,15 @@ export function HangarScreen() {
           question={pendingUpgrade.question}
           contextLabel={`격납고 · 강화 확인 (Lv.${pendingUpgrade.nextLevel})`}
           onAnswer={(choice, _correct, responseMs) => answerUpgrade(choice, responseMs)}
+        />
+      )}
+
+      {pendingVehiclePurchase && (
+        <QuestionModal
+          key={pendingVehiclePurchase.question.id}
+          question={pendingVehiclePurchase.question}
+          contextLabel={`격납고 · ${VEHICLE_DEFS[pendingVehiclePurchase.vehicleId].name} 구매 확인`}
+          onAnswer={(choice, _correct, responseMs) => answerVehiclePurchase(choice, responseMs)}
         />
       )}
     </div>
