@@ -29,6 +29,8 @@ export function LobbyScreen() {
               disabled={!unlocked}
               onClick={() => startStage(stage.id)}
             >
+              <img className="lobby__card-image" src={stage.previewImage} alt="" />
+              <span className="lobby__card-scrim" />
               {clear && <span className="lobby__card-badge">{'★'.repeat(clear.stars)}</span>}
               <span className="lobby__card-title">
                 {unlocked ? stage.label : `LOCKED · 스테이지 ${stage.id - 1} 클리어 필요`}
@@ -37,7 +39,9 @@ export function LobbyScreen() {
           )
         })}
         <button className="lobby__card lobby__card--upgrade" onClick={goToHangar}>
-          <span className="lobby__card-title">업그레이드</span>
+          <img className="lobby__card-image" src="/assets/lobby/hangar-preview.png" alt="" />
+          <span className="lobby__card-scrim" />
+          <span className="lobby__card-title">격납고</span>
         </button>
         <div className="lobby__card lobby__card--coop is-locked">
           <span className="lobby__card-badge">준비 중</span>

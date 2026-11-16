@@ -51,13 +51,15 @@ export const STAGE_THEMES: Record<number, StageTheme> = {
     bloom: true,
   },
   3: {
+    // 스테이지 1과 색감이 너무 비슷하다는 피드백 — 둘 다 같은 청록(hue 190~200대) 계열이었던
+    // 걸, 스테이지 3은 더 차갑고 진한 남청색(hue 215~225대)으로 확실히 틀어서 구별되게 한다.
     name: '빙하 거신 · 설원 바다',
     sceneryUrl: '/assets/stage3-scenery.glb',
     skyUrl: '/assets/sky-stage3-snow.png',
-    sea: { deep: 0x163848, grazing: 0x5e7e8e, sky: 0x9aaab4, foam: 0xf2f7fa, sun: 0xffffff, waveAmp: 0.85 * FLATTEN, opacity: 0.78 },
-    fog: { color: 0xc8d2d8, near: 90, far: 800 },
-    sun: { dir: [-0.3, 0.18, -0.94], color: 0xf4f6ff, intensity: 1.4 },
-    hemi: { sky: 0xdfe8ee, ground: 0x2a4450, intensity: 1.4 },
+    sea: { deep: 0x122144, grazing: 0x425b94, sky: 0x899ebd, foam: 0xf1f5f8, sun: 0xd7e5f4, waveAmp: 0.85 * FLATTEN, opacity: 0.78 },
+    fog: { color: 0xb9c4d4, near: 90, far: 800 },
+    sun: { dir: [-0.3, 0.18, -0.94], color: 0xd7e5f4, intensity: 1.4 },
+    hemi: { sky: 0xc3d0ea, ground: 0x1e2848, intensity: 1.4 },
     exposure: 1.0,
     snow: true,
   },

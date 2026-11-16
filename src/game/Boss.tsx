@@ -6,11 +6,15 @@ import type { Group, Mesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useGameStore } from '../state/gameStore'
 import { balance } from '../config/balance'
-import { getWaveHeight } from './SeaWater.js'
 import { raycastTargets } from './raycastRegistry'
 import type { BossAsset } from '../data/stages'
 
 export const COMBAT_Z = -22
+
+// 공격 전조 중 "달려드는" 느낌을 주는 lunge 연출 수치.
+const LUNGE_SPEED = 4 // 0→1 전환 속도(1/초)
+const LUNGE_DISTANCE = 2.5 // 방파제 쪽으로 다가서는 거리(m)
+const LUNGE_SCALE_BOOST = 0.05 // 몸집이 부풀어 보이는 비율
 
 // PRD 5.4 약점 진행(머리→가슴→등)에 대응하는 메시 3개 — 실제 이름은 보스 모델마다 다르므로
 // asset.weakNames(data/stages.ts)로 받는다. 페이즈마다 이 중 하나만 "열려" 있다 — 나머지
@@ -88,7 +92,9 @@ export function Boss({
   const bossDefeated = useGameStore((s) => s.bossDefeated)
   const bossActive = useGameStore((s) => s.bossActive)
   const bossArrived = useGameStore((s) => s.bossArrived)
+  const bossAttackTelegraphed = useGameStore((s) => s.bossAttackTelegraphed)
   const phase = useGameStore((s) => s.phase)
+  const lungeRef = useRef(0)
 
   useBossCombatTimers()
 
@@ -149,7 +155,7 @@ export function Boss({
     }
   }, [weakIndex, bossExposed, asset.weakNames])
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     const group = groupRef.current
     if (!group) return
 
@@ -171,9 +177,18 @@ export function Boss({
       group.rotation.y += delta * 0.05
     }
 
-    // 파도 높이를 따라가되, waveInfluence로 보스마다 얼마나 출렁일지 조절한다(공중에
-    // 뜬 보스는 살짝만, 바다에 서 있는 거신은 그대로).
-    group.position.y = getWaveHeight(0, group.position.z, clock.getElapsedTime()) * asset.waveInfluence - asset.sink
+    // 파도를 따라 출렁이지 않고 고정 높이로 다가온다 — 위아래로 움직이면 다가오는 느낌이
+    // 묻혀 보인다는 피드백으로, 전진(z)만 보이게 한다.
+    group.position.y = -asset.sink
+
+    // 포격 전조(telegraph) 중에는 방파제 쪽으로 살짝 다가서며 몸집을 부풀렸다가, 포탄이
+    // 발사되면 원래 자리로 돌아온다 — "보스 애니메이션이 없다"는 피드백으로 추가한 공격
+    // 동작(위아래 출렁임이 아니라 Z축 전진/스케일 변화라 "멀미나는" 움직임과는 다르다).
+    const lungeTarget = bossAttackTelegraphed ? 1 : 0
+    const lungeStep = Math.min(Math.abs(lungeTarget - lungeRef.current), LUNGE_SPEED * delta)
+    lungeRef.current += Math.sign(lungeTarget - lungeRef.current) * lungeStep
+    if (arrivedRef.current) group.position.z = COMBAT_Z + lungeRef.current * LUNGE_DISTANCE
+    group.scale.setScalar(asset.scale * (1 + lungeRef.current * LUNGE_SCALE_BOOST))
   })
 
   if (bossDefeated) return null

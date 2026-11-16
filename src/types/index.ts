@@ -95,6 +95,8 @@ export interface VehicleDef {
   render?: VehicleRenderAsset
   // 지정하면 격납고에서 부품으로 직접 구매할 수 있다(스테이지 클리어 해금과는 별개 경로).
   purchaseCost?: number
+  // 지정하면 해당 스테이지를 이 별점 이상으로 클리어해야 구매 버튼이 열린다(실력 검증).
+  purchaseRequiresStageClear?: { stageId: number; minStars: 1 | 2 | 3 }
   // 장착 시 무기 공격력/발사속도에 곱해지는 보너스(0.15 = +15%). 레드 썬더 Mk.II 전용.
   attackPct?: number
   fireRatePct?: number

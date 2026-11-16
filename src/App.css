@@ -141,6 +141,7 @@
   background: var(--panel);
   border: 1px solid var(--panel-line);
   clip-path: polygon(0 0, 100% 0, 100% 86%, 86% 100%, 0 100%);
+  overflow: hidden;
   color: var(--text-cream);
   display: flex;
   align-items: flex-end;
@@ -153,6 +154,37 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* 보스 프리뷰(배경 투명)는 중앙~하단에 통째로 보이게, 격납고 사진은 꽉 채운다. */
+.lobby__card-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center 65%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.lobby__card--upgrade .lobby__card-image {
+  object-fit: cover;
+  object-position: center 55%;
+}
+
+.lobby__card-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(10, 14, 17, 0.1) 35%, rgba(10, 14, 17, 0.88) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lobby__card-title,
+.lobby__card-badge {
+  position: relative;
+  z-index: 2;
+}
+
 .lobby__card::after {
   content: '';
   position: absolute;
@@ -160,6 +192,7 @@
   right: 16px;
   bottom: 10px;
   height: 3px;
+  z-index: 2;
 }
 
 .lobby__card--defense::after {
@@ -855,6 +888,34 @@
 
 .hangar__max {
   color: var(--ok-green);
+}
+
+/* 격납고 배경(HangarScene)의 전시대 전차를 가리지 않도록, 가운데 정렬 대신 화면 위쪽에
+   UI를 모아둔다(전차는 화면 아래쪽 전시대 위에 있다). 간격도 줄여서 아래로 덜 번지게 한다. */
+.screen--hangar {
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-top: 28px;
+  padding-left: 64px;
+  gap: 8px;
+}
+
+.screen--hangar h1,
+.screen--hangar .screen__subtitle {
+  align-self: center;
+}
+
+.screen--hangar .hangar__layout {
+  margin-top: 8px;
+}
+
+/* 전시대 위 전차를 가리지 않도록 무기/강화 패널은 왼쪽 가장자리에 붙이고, 출격 버튼은
+   오른쪽 아래 구석으로 뺀다. */
+.screen--hangar .hangar__sortie {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  margin-top: 0;
 }
 
 .hangar__back {

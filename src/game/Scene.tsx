@@ -15,6 +15,7 @@ import { SupplyBox } from './SupplyBox'
 import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
 import { BossShell } from './BossShell'
 import { Projectile } from './Projectile'
+import { SnowParticles } from './SnowParticles'
 import { ShellProjectile } from './ShellProjectile'
 import { MuzzleFlash } from './MuzzleFlash'
 import { ImpactEffect } from './ImpactEffect'
@@ -43,7 +44,9 @@ import type { MobKind, SupplyBoxType } from '../types'
 // 개체별 속도/스폰 간격에 편차를 둔 뒤로는(Mob.tsx speedJitter, nextSpawnInterval) 굳이 Z 범위를
 // 좁게 묶어두지 않아도 "한꺼번에 몰려온다"는 느낌이 안 생긴다 — 위치도 다양하게 보이도록 다시
 // 넓힌다.
-const MOB_SPAWN_X_SPREAD = 120
+// "한번에 많이 오지 말고 퍼져서(다양한 위치)에서 나타나게" 피드백으로 가로 범위를 한 번 더
+// 넓힌다(기존 120) — 몹들이 좌우로 더 흩어져 보이게 한다.
+const MOB_SPAWN_X_SPREAD = 170
 const MOB_SPAWN_Z_MIN = 190
 const MOB_SPAWN_Z_MAX = 240
 const BOX_Z = -16
@@ -122,13 +125,15 @@ interface Popup {
   position: [number, number, number]
   text: string
   color: string
+  // "재장전 중" 같은 안내 문구는 데미지 숫자보다 작게 띄운다.
+  small?: boolean
 }
 
 // 스폰 간격에 ±40% 정도 무작위 편차를 줘서 똑같은 박자로 한 줄씩 나오지 않게 한다
 // ("몹들이 너무 동시에 다가온다" 피드백 — 고정 간격이면 속도가 비슷한 몹들이 계속 같은
 // 간격으로 붙어서 결국 한 덩어리처럼 보인다).
 function nextSpawnInterval() {
-  return balance.combat.crabSpawnIntervalSec * (0.6 + Math.random() * 0.8)
+  return balance.combat.crabSpawnIntervalSec * (0.6 + Math.random() * 1.0)
 }
 
 function Spawner({ onSpawn }: { onSpawn: (progress: number) => void }) {
@@ -398,12 +403,12 @@ function SceneContents() {
     addImpact(position, BOMBARD_IMPACT_COLOR, 0.55)
   }
 
-  const addPopup = (position: [number, number, number], text: string, color: string) => {
+  const addPopup = (position: [number, number, number], text: string, color: string, small = false) => {
     const id = `popup-${nextId.current++}`
     // 명중 지점은 피격 대상 표면 위라서, 그 자리에 그대로 띄우면 모델 자체 지오메트리에 가려
     // 안 보이는 경우가 있다. 위쪽 + 카메라 쪽으로 살짝 띄워서 확실히 보이게 한다.
     const offsetPosition: [number, number, number] = [position[0], position[1] + 0.9, position[2] + 1.0]
-    setPopups((list) => [...list, { id, position: offsetPosition, text, color }])
+    setPopups((list) => [...list, { id, position: offsetPosition, text, color, small }])
   }
 
   const handleMiss = (e: ThreeEvent<PointerEvent>) => {
@@ -430,7 +435,7 @@ function SceneContents() {
           asset={getStageDef(currentStageId).bossAsset}
           onHit={(targetWeak, point) => {
             if (!tryFire()) {
-              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR, true)
               return
             }
             addTracer(point)
@@ -453,7 +458,7 @@ function SceneContents() {
           to={sh.to}
           onHit={(point) => {
             if (!tryFire()) {
-              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR, true)
               return false
             }
             addTracer(point)
@@ -477,7 +482,7 @@ function SceneContents() {
           startZ={m.startZ}
           onHit={(point) => {
             if (!tryFire()) {
-              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR, true)
               return false
             }
             addTracer(point)
@@ -512,7 +517,7 @@ function SceneContents() {
           groundY={BOX_GROUND_Y}
           onCatch={(point) => {
             if (!tryFire()) {
-              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR)
+              addPopup(point, '재장전 중', RELOAD_POPUP_COLOR, true)
               return false
             }
             addTracer(point)
@@ -576,6 +581,7 @@ function SceneContents() {
           position={p.position}
           text={p.text}
           color={p.color}
+          fontSize={p.small ? 0.55 : undefined}
           onDone={() => setPopups((list) => list.filter((x) => x.id !== p.id))}
         />
       ))}
@@ -585,6 +591,8 @@ function SceneContents() {
           <Bloom luminanceThreshold={0.8} mipmapBlur />
         </EffectComposer>
       )}
+      {/* 설원 바다 스테이지 — 빗소리 대신 흩날리는 눈. */}
+      {theme.snow && <SnowParticles />}
     </>
   )
 }

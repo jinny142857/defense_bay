@@ -4,6 +4,7 @@ import { getStageDef } from './data/stages'
 import { sound } from './game/sound'
 import { preloadFlipbookSheets } from './game/flipbookVfx'
 import { Scene } from './game/Scene'
+import { HangarScene } from './game/HangarScene'
 import { LoadingScreen } from './ui/LoadingScreen'
 import { LobbyScreen } from './ui/LobbyScreen'
 import { PreCheckScreen } from './ui/PreCheckScreen'
@@ -70,8 +71,9 @@ export default function App() {
   useEffect(() => {
     if (!showScene) return
     // 해파리 대왕 스테이지(달밤 바다)는 폭풍우가 아니라 잔잔한 밤바다 분위기라 빗소리를 약하게 깐다.
-    const rainVolume = currentStageId === 2 ? 0.08 : 0.3
-    sound.startLoop('rain', 'rainLoop', rainVolume)
+    // 빙하 거신 스테이지(설원 바다)는 비 대신 눈이 내리는 장면이라 빗소리를 아예 끈다.
+    const rainVolume = currentStageId === 3 ? 0 : currentStageId === 2 ? 0.08 : 0.3
+    if (rainVolume > 0) sound.startLoop('rain', 'rainLoop', rainVolume)
     return () => sound.stopLoop('rain')
   }, [showScene, currentStageId])
 
@@ -105,7 +107,12 @@ export default function App() {
         {phase === 'DEBRIEF' && <DebriefScreen />}
         {phase === 'MAINTENANCE' && <MaintenanceScreen />}
         {phase === 'STAGE_RESULT' && <StageResultScreen />}
-        {phase === 'HANGAR' && <HangarScreen />}
+        {phase === 'HANGAR' && (
+          <>
+            <HangarScene />
+            <HangarScreen />
+          </>
+        )}
       </ScreenTransition>
     </div>
   )

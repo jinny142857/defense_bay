@@ -21,10 +21,19 @@ import type {
 import stage1Questions from '../data/questions/math-g3-2-fraction.json'
 import stage2Questions from '../data/questions/math-g3-2-fraction-advanced.json'
 
-// 스테이지마다 다른 문제 은행에서 뽑는다 — 스테이지 2는 "같은 분수 단원, 심화" 문제로 채운다.
+// 분수 기본 범위(동분모 비교/단위분수 비교/자연수의 분수만큼/가분수·대분수 변환) — 모든
+// 스테이지가 공통으로 다루는 기본 범위.
+const BASIC_QUESTIONS: Question[] = stage1Questions as Question[]
+// 심화 문제(같은 유형, 더 어려운 숫자) — 스테이지가 올라갈수록 기본 범위에 더해진다.
+const ADVANCED_QUESTIONS: Question[] = stage2Questions as Question[]
+
+// 스테이지마다 다른 문제 은행에서 뽑는다 — 범위(1·2학기 분수 전체)는 모든 스테이지에서 동일하게
+// 유지하고, 스테이지 2부터는 심화 문제를 더해 섞어 낸다(난이도는 몹/보스 수치로도 올라간다).
+// 3번째 항목은 스테이지 3이 아직 없어도 미리 채워둔 것 — 스테이지 3을 만들 때 그대로 쓰면 된다.
 const QUESTION_POOLS: Record<number, Question[]> = {
-  1: stage1Questions as Question[],
-  2: stage2Questions as Question[],
+  1: BASIC_QUESTIONS,
+  2: [...BASIC_QUESTIONS, ...ADVANCED_QUESTIONS],
+  3: [...BASIC_QUESTIONS, ...ADVANCED_QUESTIONS],
 }
 
 function getQuestionPool(stageId: number): Question[] {
@@ -783,8 +792,11 @@ export const useGameStore = create<GameState>()(
       requestVehiclePurchase: (vehicleId) => {
         const s = get()
         if (s.ownedVehicles.includes(vehicleId) || s.pendingVehiclePurchase) return
-        const cost = VEHICLE_DEFS[vehicleId]?.purchaseCost
+        const def = VEHICLE_DEFS[vehicleId]
+        const cost = def?.purchaseCost
         if (!cost || s.parts < cost) return
+        const req = def?.purchaseRequiresStageClear
+        if (req && (s.stageClears[req.stageId]?.stars ?? 0) < req.minStars) return
         const used = s.usedQuestionIds
         const [q] = pickQuestions(s.currentStageId, 1, used)
         if (!q) return

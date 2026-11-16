@@ -21,6 +21,7 @@ export function HangarScreen() {
   const ownedVehicles = useGameStore((s) => s.ownedVehicles)
   const equippedVehicleId = useGameStore((s) => s.equippedVehicleId)
   const equipVehicle = useGameStore((s) => s.equipVehicle)
+  const stageClears = useGameStore((s) => s.stageClears)
   const pendingVehiclePurchase = useGameStore((s) => s.pendingVehiclePurchase)
   const requestVehiclePurchase = useGameStore((s) => s.requestVehiclePurchase)
   const answerVehiclePurchase = useGameStore((s) => s.answerVehiclePurchase)
@@ -48,7 +49,9 @@ export function HangarScreen() {
         {ALL_VEHICLE_IDS.map((id) => {
           const def = VEHICLE_DEFS[id]
           const owned = ownedVehicles.includes(id)
-          const purchasable = !owned && def.purchaseCost != null
+          const req = def.purchaseRequiresStageClear
+          const stageRequirementMet = !req || (stageClears[req.stageId]?.stars ?? 0) >= req.minStars
+          const purchasable = !owned && def.purchaseCost != null && stageRequirementMet
           if (purchasable) {
             const cost = def.purchaseCost ?? 0
             const canAfford = parts >= cost && !pendingVehiclePurchase

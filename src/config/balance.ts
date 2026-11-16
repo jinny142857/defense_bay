@@ -25,7 +25,8 @@ export const balance = {
     crabDamageOnHit: 10, // 몹이 방파제에 닿았을 때 피해
     // 스폰 거리를 멀리 늘린 만큼(Scene.tsx MOB_SPAWN_Z) 간격도 늘려야 동시에 몰려 보이는 몹 수가
     // 늘지 않는다. 1.2초였을 때는 거의 전체 웨이브가 한꺼번에 바다 위에 떠 있는 것처럼 보였다.
-    crabSpawnIntervalSec: 3.0,
+    // "한번에 많이 오지 말고" 피드백으로 한 단계 더 늘린다(기존 3.0).
+    crabSpawnIntervalSec: 3.6,
   },
 
   // 몹 모델(SeaMobs_GameAssets, README_for_ClaudeCode.md 가이드)별 이동/잠김 수치.
@@ -41,10 +42,10 @@ export const balance = {
   // speed: 7.5/5도 여전히 느리다는 피드백 — 더 올린다(방파제 정지 지점이 이제 제대로 멀리
   // 떨어져 있어서, 예전에 "너무 빠르다"였던 9/6 근처로 돌아가도 코앞까지 덮치는 느낌은 없다).
   // scale: "조금만 줄여달라"는 피드백으로 한 단계만 낮춘다(기존 0.85/1, 그다음 0.7/0.82).
-  // speed: "다가오는 속도를 느리게" 피드백으로 한 단계 낮춘다(기존 9/6).
+  // speed: "다가오는 속도를 느리게" 피드백으로 한 단계 낮춘다(기존 9/6, 그다음 7/5).
   mobs: {
-    crab: { speed: 7, sink: 0.12, scale: 0.6, hp: 100 },
-    frogTurtle: { speed: 5, sink: 0.3, scale: 0.72, hp: 220 },
+    crab: { speed: 6.2, sink: 0.12, scale: 0.6, hp: 100 },
+    frogTurtle: { speed: 4.4, sink: 0.3, scale: 0.72, hp: 220 },
   },
 
   // PRD 4.3 스테이지 1, 웨이브별 일반 몹 수 (3웨이브는 보스 포함)

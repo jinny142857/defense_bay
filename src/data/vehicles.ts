@@ -11,8 +11,9 @@ export const DEFAULT_VEHICLE_RENDER: VehicleRenderAsset = {
 
 // PRD 6.2 격납고 해금 규칙. 스테이지 2까지만 구현돼 있어 black_titan은 아직
 // 잠금 상태로만 노출한다(스테이지 5가 생기면 그때 stages.ts clearUnlock에 연결).
-// 레드 썬더 Mk.II는 스테이지 클리어가 아니라 부품 구매(purchaseCost)로 해금되는
-// 첫 기체 — 장착하면 공격력/발사속도에 보너스가 붙는다(TankMkII_GameAssets 가이드).
+// 레드 썬더 Mk.II는 스테이지 클리어가 아니라 부품 구매(purchaseCost)로 해금되는 첫 기체 —
+// 단, 아무나 사는 게 아니라 스테이지 2를 별 3개(최고 등급)로 클리어해야 구매 버튼이 열린다.
+// 장착하면 공격력/발사속도에 보너스가 붙는다(TankMkII_GameAssets 가이드).
 export const VEHICLE_DEFS: Record<string, VehicleDef> = {
   red_hornet: { id: 'red_hornet', name: '레드 호넷', unlockHint: '시작 기체' },
   yellow_ranger: { id: 'yellow_ranger', name: '옐로 레인저', unlockHint: '스테이지 2 클리어 필요' },
@@ -20,8 +21,9 @@ export const VEHICLE_DEFS: Record<string, VehicleDef> = {
   mk2_red_thunder: {
     id: 'mk2_red_thunder',
     name: '레드 썬더 Mk.II',
-    unlockHint: '부품 구매',
+    unlockHint: '스테이지 2 별 3개 클리어 필요',
     purchaseCost: 300,
+    purchaseRequiresStageClear: { stageId: 2, minStars: 3 },
     attackPct: 0.15,
     fireRatePct: 0.1,
     render: {
