@@ -12,7 +12,7 @@ import { Breakwater } from './Breakwater'
 import { Turret } from './Turret'
 import { Mob } from './Mob'
 import { SupplyBox } from './SupplyBox'
-import { Boss, COMBAT_Z as BOSS_COMBAT_Z } from './Boss'
+import { Boss } from './Boss'
 import { BossShell } from './BossShell'
 import { Projectile } from './Projectile'
 import { SnowParticles } from './SnowParticles'
@@ -25,6 +25,7 @@ import { triggerFireSignal } from './fireSignal'
 import { sound } from './sound'
 import { aimSignal } from './aimSignal'
 import { muzzleSignal } from './muzzleSignal'
+import { bossMouthSignal } from './bossMouthSignal'
 import { raycastTargets } from './raycastRegistry'
 import { balance } from '../config/balance'
 import { WEAPON_DEFS } from '../data/weapons'
@@ -64,8 +65,6 @@ const BOMBARD_IMPACT_COLOR = '#ff8a3d'
 const BOSS_CRIT_POPUP_COLOR = '#f2b22e'
 const BOSS_NORMAL_POPUP_COLOR = '#c9c9c9'
 const BOSS_SHELL_IMPACT_COLOR = '#ff6a2b'
-// 보스 포탄이 출발하는 높이(보스 몸통 위쪽 즈음)와, 방파제 쪽 착탄 지점이 흩어질 가로 폭/높이.
-const BOSS_SHELL_FROM_Y = 9
 // 착탄 지점이 카메라 시야 밖으로 나가면 쏴서 막을 수가 없다 — 카메라(z=-3.3)에서 착탄
 // 깊이(z=-6.5)까지는 3.2m뿐이라 화면에 들어오는 가로 폭이 생각보다 좁다(시야각 계산상 약
 // ±2.4m). 넉넉히 안쪽으로 좁혀서 항상 화면 안에 떨어지게 한다.
@@ -75,10 +74,6 @@ const BOSS_SHELL_TARGET_Z = -6.5
 // 위에서 내려다보는 각도는 유지하고, 카메라를 탱크 쪽으로 더 앞으로 당긴다.
 const CAMERA_HOME = new Vector3(0, 2.6, -3.3)
 const CAMERA_HOME_LOOK: [number, number, number] = [0, 2.5, -20]
-// 보스 등장 연출: 바다 한가운데 고정된 거신 둘레를 카메라가 한 바퀴 돈다.
-const BOSS_ORBIT_RADIUS = 18
-const BOSS_ORBIT_HEIGHT = 5
-const BOSS_LOOK_HEIGHT = 3
 
 interface MobEntity {
   id: string
@@ -197,37 +192,21 @@ function SupplyBoxSpawner({
   return null
 }
 
-const orbitTarget = new Vector3()
-
 function CameraRig() {
   const { camera } = useThree()
-  const phase = useGameStore((s) => s.phase)
-  const introStartRef = useRef<number | null>(null)
 
   useEffect(() => {
     camera.position.copy(CAMERA_HOME)
     camera.lookAt(...CAMERA_HOME_LOOK)
   }, [camera])
 
-  useEffect(() => {
-    if (phase === 'BOSS_INTRO') introStartRef.current = performance.now()
-  }, [phase])
-
+  // 보스 등장 연출(BOSS_INTRO)이 이제 3웨이브가 열리자마자, 보스가 아직 수평선 멀리 있을 때
+  // 바로 재생되므로(예전엔 교전 거리 도착 후에야 재생해서 다가오는 과정을 못 봤다는 피드백),
+  // 카메라를 보스 쪽으로 당겨서 도는 연출은 뺐다 — 기본 시야(정면)가 이미 보스 스폰 방향과
+  // 같아서, 그냥 평소 시야를 유지하면 플레이어가 수평선에서 다가오는 보스를 그대로 본다.
   useFrame(() => {
-    if (phase === 'BOSS_INTRO') {
-      const elapsed = introStartRef.current != null ? (performance.now() - introStartRef.current) / 1000 : 0
-      const angle = (elapsed / balance.boss.introDurationSec) * Math.PI * 2
-      orbitTarget.set(
-        Math.sin(angle) * BOSS_ORBIT_RADIUS,
-        BOSS_ORBIT_HEIGHT,
-        BOSS_COMBAT_Z + Math.cos(angle) * BOSS_ORBIT_RADIUS,
-      )
-      camera.position.lerp(orbitTarget, 0.08)
-      camera.lookAt(0, BOSS_LOOK_HEIGHT, BOSS_COMBAT_Z)
-    } else {
-      camera.position.lerp(CAMERA_HOME, 0.05)
-      camera.lookAt(...CAMERA_HOME_LOOK)
-    }
+    camera.position.lerp(CAMERA_HOME, 0.05)
+    camera.lookAt(...CAMERA_HOME_LOOK)
   })
 
   return null
@@ -329,11 +308,12 @@ function SceneContents() {
   }, [bombardPulse])
 
   // 보스의 "파도 공격" 전조가 끝나면(Boss.tsx launchBossShell) 실제로 포탄 하나를 띄운다 —
-  // 보스 쪽에서 출발해 방파제 쪽 무작위 지점으로 떨어지는 포물선을 그린다.
+  // 보스 몸통(약점 메시)의 실시간 위치(bossMouthSignal)에서 출발해, 보스몹이 직접 던지는
+  // 것처럼 보이게 하고, 방파제 쪽 무작위 지점으로 떨어지는 포물선을 그린다.
   useEffect(() => {
     if (bossShellPulse === 0) return
     const id = `shell-${nextId.current++}`
-    const from: [number, number, number] = [0, BOSS_SHELL_FROM_Y, BOSS_COMBAT_Z]
+    const from: [number, number, number] = [bossMouthSignal.x, bossMouthSignal.y, bossMouthSignal.z]
     const to: [number, number, number] = [
       (Math.random() - 0.5) * BOSS_SHELL_TARGET_X_SPREAD,
       BOSS_SHELL_TARGET_Y,

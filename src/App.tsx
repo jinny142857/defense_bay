@@ -6,6 +6,7 @@ import { preloadFlipbookSheets } from './game/flipbookVfx'
 import { Scene } from './game/Scene'
 import { HangarScene } from './game/HangarScene'
 import { LoadingScreen } from './ui/LoadingScreen'
+import { TitleScreen } from './ui/TitleScreen'
 import { LobbyScreen } from './ui/LobbyScreen'
 import { PreCheckScreen } from './ui/PreCheckScreen'
 import { CombatHUD } from './ui/CombatHUD'
@@ -46,6 +47,9 @@ export default function App() {
   // (열려 있던 문제 포함)을 그대로 이어간다.
   const [hydrated, setHydrated] = useState(() => useGameStore.persist.hasHydrated())
   const [minTimeElapsed, setMinTimeElapsed] = useState(false)
+  // 저장된 진행 상황이 있어도 항상 타이틀 화면부터 보여달라는 피드백 — 저장소에는 남기지
+  // 않는 로컬 상태라 새로고침하면 다시 타이틀부터 시작한다.
+  const [showTitle, setShowTitle] = useState(true)
 
   useEffect(() => {
     if (hydrated) return
@@ -83,6 +87,14 @@ export default function App() {
     return (
       <div className="app">
         <LoadingScreen />
+      </div>
+    )
+  }
+
+  if (showTitle) {
+    return (
+      <div className="app">
+        <TitleScreen onDone={() => setShowTitle(false)} />
       </div>
     )
   }

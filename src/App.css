@@ -27,6 +27,55 @@
   margin: 0;
 }
 
+/* --- 타이틀 --- */
+.screen--title h1 {
+  font-size: 2.2rem;
+}
+
+.title__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.title__btn {
+  padding: 12px 32px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  color: var(--text-cream);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.title__btn--primary {
+  background: linear-gradient(90deg, var(--accent-orange-1), var(--accent-orange-2));
+  border: none;
+}
+
+.title__btn--danger {
+  background: #a23b2e;
+  border: none;
+}
+
+.title__confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+}
+
+.title__confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
 /* --- 로딩 --- */
 .loading-screen {
   position: absolute;

@@ -434,7 +434,10 @@ export const useGameStore = create<GameState>()(
         const crabsTotal = stageDef.crabCountsByWave[s.waveNumber - 1]
         const isBossWave = s.waveNumber === stageDef.crabCountsByWave.length
         set({
-          phase: 'COMBAT',
+          // 보스 웨이브는 열리자마자 바로 등장 연출(BOSS_INTRO)을 보여준다 — 예전엔 보스가
+          // 교전 거리까지 다 온 뒤에야 연출이 나와서, 수평선에서부터 다가오는 과정을 플레이어가
+          // 못 보고 "갑자기 바다 한가운데 나타났다"고 느꼈다는 피드백.
+          phase: isBossWave ? 'BOSS_INTRO' : 'COMBAT',
           crabsTotal,
           crabsRemaining: crabsTotal,
           crabsDefeated: 0,
@@ -442,7 +445,7 @@ export const useGameStore = create<GameState>()(
             ? {
                 bossActive: false,
                 bossDefeated: false,
-                bossTriggered: false,
+                bossTriggered: true,
                 bossHp: getEffectiveBossMaxHp(s.currentStageId),
                 bossWeakPointIndex: 0 as WeakIndex,
                 bossExposed: true,
@@ -467,15 +470,17 @@ export const useGameStore = create<GameState>()(
         resolveCrab(set, get)
       },
     
+      // 등장 연출(BOSS_INTRO)은 이제 beginWave에서 웨이브가 열리자마자 바로 재생되므로,
+      // 여기서는 보스가 실제로 교전 거리에 도착했을 때 전투(약점 판정/공격 타이머)만 켠다.
       bossArrived: () => {
         const s = get()
         const isBossWave = s.waveNumber === getStageDef(s.currentStageId).crabCountsByWave.length
-        if (!isBossWave || s.bossTriggered || s.bossDefeated) return
-        set({ phase: 'BOSS_INTRO', bossTriggered: true })
+        if (!isBossWave || s.bossActive || s.bossDefeated) return
+        set({ bossActive: true })
       },
 
       finishBossIntro: () => {
-        set({ phase: 'COMBAT', bossActive: true })
+        set({ phase: 'COMBAT' })
       },
 
       getEffectiveAttack: () => getEffectiveAttack(get),

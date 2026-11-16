@@ -83,7 +83,8 @@ export const balance = {
     shellInterceptScore: 30,
     // 보스가 수평선(스폰 지점)에서 교전 거리(Boss.tsx COMBAT_Z)까지 다가오는 속도 — 일반
     // 몹(7~5)보다 훨씬 느리게, 웅장하고 위협적으로 느껴지도록 천천히 다가온다.
-    approachSpeed: 1.6,
+    // "다가오는 속도를 좀 더 줄여달라"는 피드백으로 한 단계 더 낮춘다(기존 1.6).
+    approachSpeed: 1.3,
     approachSpawnZ: -150,
     introDurationSec: 6,
   },
